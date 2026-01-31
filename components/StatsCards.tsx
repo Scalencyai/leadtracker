@@ -1,4 +1,4 @@
-import type { VisitorWithStats } from '@/lib/db';
+import type { VisitorWithStats } from '@/lib/types';
 
 interface StatsCardsProps {
   visitors: VisitorWithStats[];

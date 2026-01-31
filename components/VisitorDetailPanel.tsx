@@ -1,7 +1,7 @@
 'use client';
 
 import { useEffect, useState } from 'react';
-import type { Visitor, PageView } from '@/lib/db';
+import type { Visitor, PageView } from '@/lib/types';
 
 interface VisitorDetailPanelProps {
   visitorId: number;

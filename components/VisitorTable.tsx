@@ -1,8 +1,8 @@
-import type { VisitorWithStats } from '@/lib/db';
+import type { VisitorWithStats } from '@/lib/types';
 
 interface VisitorTableProps {
   visitors: VisitorWithStats[];
-  onSelectVisitor: (id: number) => void;
+  onSelectVisitor: (id: string | number) => void;
 }
 
 export default function VisitorTable({ visitors, onSelectVisitor }: VisitorTableProps) {

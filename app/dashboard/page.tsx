@@ -5,18 +5,15 @@ import VisitorTable from '@/components/VisitorTable';
 import StatsCards from '@/components/StatsCards';
 import Filters from '@/components/Filters';
 import TrackingScriptModal from '@/components/TrackingScriptModal';
-import VisitorDetailPanel from '@/components/VisitorDetailPanel';
 import InstallationChecker from '@/components/InstallationChecker';
-import type { VisitorWithStats } from '@/lib/db';
+import { getVisitorsWithStats, getCountries, type VisitorWithStats } from '@/lib/storage';
 
 export default function Dashboard() {
   const [visitors, setVisitors] = useState<VisitorWithStats[]>([]);
   const [filteredVisitors, setFilteredVisitors] = useState<VisitorWithStats[]>([]);
   const [countries, setCountries] = useState<string[]>([]);
-  const [selectedVisitor, setSelectedVisitor] = useState<number | null>(null);
+  const [selectedVisitor, setSelectedVisitor] = useState<string | number | null>(null);
   const [showScriptModal, setShowScriptModal] = useState(false);
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
   
   // Filters
   const [searchQuery, setSearchQuery] = useState('');
@@ -25,52 +22,28 @@ export default function Dashboard() {
   const [activeOnly, setActiveOnly] = useState(false);
   const [hideBotsAndISPs, setHideBotsAndISPs] = useState(true);
 
-  // Load initial data and setup SSE
+  // Load data from localStorage
   useEffect(() => {
-    // Fetch initial data
-    fetchVisitors();
-
-    // Setup Server-Sent Events for realtime updates (only if no error)
-    let eventSource: EventSource | null = null;
+    loadData();
     
-    if (!error) {
-      try {
-        eventSource = new EventSource('/api/visitors/stream');
-
-        eventSource.onmessage = (event) => {
-          try {
-            const updatedVisitors = JSON.parse(event.data);
-            setVisitors(updatedVisitors);
-            setError(null);
-          } catch (e) {
-            console.error('Failed to parse SSE data:', e);
-          }
-        };
-
-        eventSource.onerror = (e) => {
-          console.error('SSE connection error:', e);
-          // Don't show error to user, just log it
-        };
-      } catch (e) {
-        console.error('Failed to setup SSE:', e);
-      }
-    }
-
-    return () => {
-      if (eventSource) {
-        eventSource.close();
-      }
-    };
-  }, [error]);
+    // Refresh every 5 seconds
+    const interval = setInterval(loadData, 5000);
+    return () => clearInterval(interval);
+  }, []);
 
   // Apply filters
   useEffect(() => {
-    let filtered = [...visitors];
+    applyFilters();
+  }, [visitors, searchQuery, selectedCountry, dateRange, activeOnly, hideBotsAndISPs]);
 
-    // Hide bots and ISPs
-    if (hideBotsAndISPs) {
-      filtered = filtered.filter(v => !v.is_bot && !v.is_isp);
-    }
+  function loadData() {
+    const allVisitors = getVisitorsWithStats({ hideBotsAndISPs });
+    setVisitors(allVisitors);
+    setCountries(getCountries());
+  }
+
+  function applyFilters() {
+    let filtered = [...visitors];
 
     // Search filter
     if (searchQuery) {
@@ -113,94 +86,18 @@ export default function Dashboard() {
     }
 
     setFilteredVisitors(filtered);
-  }, [visitors, searchQuery, selectedCountry, dateRange, activeOnly, hideBotsAndISPs]);
-
-  async function fetchVisitors() {
-    try {
-      setLoading(true);
-      setError(null);
-      
-      const res = await fetch('/api/visitors');
-      
-      if (!res.ok) {
-        throw new Error(`API returned ${res.status}: ${res.statusText}`);
-      }
-      
-      const data = await res.json();
-      
-      if (data.visitors && Array.isArray(data.visitors)) {
-        setVisitors(data.visitors);
-      } else {
-        setVisitors([]);
-      }
-      
-      if (data.countries && Array.isArray(data.countries)) {
-        setCountries(data.countries);
-      } else {
-        setCountries([]);
-      }
-    } catch (error: any) {
-      console.error('Failed to fetch visitors:', error);
-      setError(error.message || 'Failed to load data');
-      setVisitors([]);
-      setCountries([]);
-    } finally {
-      setLoading(false);
-    }
   }
 
   function handleExport() {
-    const params = new URLSearchParams();
-    if (hideBotsAndISPs) params.set('hideBotsAndISPs', 'true');
-    if (selectedCountry) params.set('country', selectedCountry);
-    if (searchQuery) params.set('search', searchQuery);
-    if (activeOnly) params.set('activeOnly', 'true');
-
-    const url = `/api/export?${params.toString()}`;
-    window.open(url, '_blank');
-  }
-
-  // Error UI
-  if (error) {
-    return (
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-950 flex items-center justify-center p-4">
-        <div className="max-w-md w-full bg-white dark:bg-gray-900 rounded-lg shadow-xl p-8">
-          <div className="text-center">
-            <div className="text-red-500 text-5xl mb-4">⚠️</div>
-            <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
-              Database Connection Error
-            </h2>
-            <p className="text-gray-600 dark:text-gray-400 mb-6">
-              {error}
-            </p>
-            <button
-              onClick={fetchVisitors}
-              className="px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-colors"
-            >
-              Retry Connection
-            </button>
-            <div className="mt-4 text-sm text-gray-500">
-              <p>Debug endpoints:</p>
-              <a href="/api/debug" target="_blank" className="text-blue-600 hover:underline">
-                /api/debug
-              </a>
-            </div>
-          </div>
-        </div>
-      </div>
-    );
-  }
-
-  // Loading UI
-  if (loading) {
-    return (
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-950 flex items-center justify-center">
-        <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
-          <p className="text-gray-600 dark:text-gray-400">Loading dashboard...</p>
-        </div>
-      </div>
-    );
+    const { exportData } = require('@/lib/storage');
+    const jsonData = exportData();
+    const blob = new Blob([jsonData], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `leadtracker_${new Date().toISOString().split('T')[0]}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
   }
 
   return (
@@ -214,7 +111,7 @@ export default function Dashboard() {
                 LeadTracker
               </h1>
               <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-                Free B2B Website Visitor Identification
+                Free B2B Website Visitor Identification (LocalStorage)
               </p>
             </div>
             <div className="flex items-center gap-3">
@@ -222,7 +119,7 @@ export default function Dashboard() {
                 onClick={handleExport}
                 className="px-4 py-2 text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
               >
-                Export CSV
+                Export Data
               </button>
               <button
                 onClick={() => setShowScriptModal(true)}
@@ -269,13 +166,6 @@ export default function Dashboard() {
       {/* Modals */}
       {showScriptModal && (
         <TrackingScriptModal onClose={() => setShowScriptModal(false)} />
-      )}
-
-      {selectedVisitor && (
-        <VisitorDetailPanel
-          visitorId={selectedVisitor}
-          onClose={() => setSelectedVisitor(null)}
-        />
       )}
     </div>
   );
