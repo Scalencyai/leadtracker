@@ -1,20 +1,11 @@
 import { NextResponse } from 'next/server';
-import { initDb } from '@/lib/db';
 
 export const runtime = 'nodejs';
 
+// No database - using localStorage
 export async function POST() {
-  try {
-    await initDb();
-    return NextResponse.json({ 
-      success: true,
-      message: 'Database initialized successfully'
-    });
-  } catch (error: any) {
-    return NextResponse.json({
-      success: false,
-      error: error.message,
-      stack: error.stack,
-    }, { status: 500 });
-  }
+  return NextResponse.json({ 
+    success: true,
+    message: 'No database initialization needed - using localStorage'
+  });
 }
