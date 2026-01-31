@@ -1,8 +1,23 @@
 import { sql } from '@vercel/postgres';
+import { createPool } from '@vercel/postgres';
+
+// Get the connection string - check both test_ prefix and normal
+const connectionString = 
+  process.env.test_POSTGRES_URL || 
+  process.env.POSTGRES_URL ||
+  process.env.DATABASE_URL;
+
+// Create custom pool with connection string
+export const db = connectionString 
+  ? createPool({ connectionString })
+  : sql;
+
+// Use the pool for queries
+const query = db.sql || sql;
 
 // Initialize database schema
 export async function initDb() {
-  await sql`
+  await query`
     CREATE TABLE IF NOT EXISTS visitors (
       id SERIAL PRIMARY KEY,
       ip_address TEXT NOT NULL UNIQUE,
@@ -67,20 +82,20 @@ export interface VisitorWithStats extends Visitor {
 // Get or create visitor by IP
 export async function getOrCreateVisitor(ipAddress: string, timestamp: number): Promise<Visitor> {
   // Try to get existing visitor
-  const existing = await sql`
+  const existing = await query`
     SELECT * FROM visitors WHERE ip_address = ${ipAddress}
   `;
 
   if (existing.rows.length > 0) {
     // Update last_seen
-    await sql`
+    await query`
       UPDATE visitors SET last_seen = ${timestamp} WHERE ip_address = ${ipAddress}
     `;
     return { ...existing.rows[0], last_seen: timestamp } as Visitor;
   }
 
   // Insert new visitor
-  const result = await sql`
+  const result = await query`
     INSERT INTO visitors (ip_address, first_seen, last_seen)
     VALUES (${ipAddress}, ${timestamp}, ${timestamp})
     RETURNING *
@@ -97,7 +112,7 @@ export async function addPageView(
   userAgent: string | null,
   timestamp: number
 ): Promise<PageView> {
-  const result = await sql`
+  const result = await query`
     INSERT INTO page_views (visitor_id, page_url, referrer, user_agent, viewed_at)
     VALUES (${visitorId}, ${pageUrl}, ${referrer}, ${userAgent}, ${timestamp})
     RETURNING *
@@ -119,7 +134,7 @@ export async function updateVisitorLookup(
   }
 ): Promise<void> {
   const timestamp = Date.now();
-  await sql`
+  await query`
     UPDATE visitors
     SET company_name = ${data.company_name},
         country = ${data.country},
@@ -185,8 +200,8 @@ export async function getVisitorsWithStats(filters?: {
 
   queryParts.push('GROUP BY v.id ORDER BY v.last_seen DESC');
 
-  const query = queryParts.join(' ');
-  const result = await sql.query(query);
+  const queryStr = queryParts.join(' ');
+  const result = await query.query(queryStr);
 
   return result.rows.map(v => ({
     ...v,
@@ -196,13 +211,13 @@ export async function getVisitorsWithStats(filters?: {
 
 // Get visitor details with all page views
 export async function getVisitorDetails(visitorId: number): Promise<{ visitor: Visitor; pageViews: PageView[] } | null> {
-  const visitorResult = await sql`
+  const visitorResult = await query`
     SELECT * FROM visitors WHERE id = ${visitorId}
   `;
 
   if (visitorResult.rows.length === 0) return null;
 
-  const pageViewsResult = await sql`
+  const pageViewsResult = await query`
     SELECT * FROM page_views WHERE visitor_id = ${visitorId} ORDER BY viewed_at DESC
   `;
 
@@ -214,7 +229,7 @@ export async function getVisitorDetails(visitorId: number): Promise<{ visitor: V
 
 // Get unique countries
 export async function getCountries(): Promise<string[]> {
-  const result = await sql`
+  const result = await query`
     SELECT DISTINCT country FROM visitors WHERE country IS NOT NULL ORDER BY country
   `;
   return result.rows.map(r => r.country);
@@ -223,7 +238,7 @@ export async function getCountries(): Promise<string[]> {
 // Clean old data
 export async function cleanOldData(retentionDays: number): Promise<number> {
   const cutoffTime = Date.now() - retentionDays * 24 * 60 * 60 * 1000;
-  const result = await sql`
+  const result = await query`
     DELETE FROM visitors WHERE last_seen < ${cutoffTime}
   `;
   return result.rowCount || 0;
@@ -237,6 +252,6 @@ export function needsLookup(visitor: Visitor): boolean {
   return cacheAge > oneDayMs;
 }
 
-// Export sql for health checks
-export { sql as pool };
-export default sql;
+// Export for health checks
+export { query as pool };
+export default query;
