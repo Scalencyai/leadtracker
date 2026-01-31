@@ -44,7 +44,10 @@ export async function POST(request: NextRequest) {
 
     // Rate limiting
     if (!checkRateLimit(ip)) {
-      return NextResponse.json({ error: 'Rate limit exceeded' }, { status: 429 });
+      return NextResponse.json({ error: 'Rate limit exceeded' }, { 
+        status: 429,
+        headers: { 'Access-Control-Allow-Origin': '*' }
+      });
     }
 
     // Parse request body
@@ -52,7 +55,10 @@ export async function POST(request: NextRequest) {
     const { url, referrer, userAgent, timestamp } = body;
 
     if (!url || !timestamp) {
-      return NextResponse.json({ error: 'Missing required fields' }, { status: 400 });
+      return NextResponse.json({ error: 'Missing required fields' }, { 
+        status: 400,
+        headers: { 'Access-Control-Allow-Origin': '*' }
+      });
     }
 
     // Get or create visitor
@@ -72,10 +78,17 @@ export async function POST(request: NextRequest) {
         });
     }
 
-    return NextResponse.json({ success: true });
+    return NextResponse.json({ success: true }, {
+      headers: {
+        'Access-Control-Allow-Origin': '*',
+      }
+    });
   } catch (error) {
     console.error('Track API error:', error);
-    return NextResponse.json({ error: 'Internal server error' }, { status: 500 });
+    return NextResponse.json({ error: 'Internal server error' }, { 
+      status: 500,
+      headers: { 'Access-Control-Allow-Origin': '*' }
+    });
   }
 }
 
