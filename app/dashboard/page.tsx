@@ -15,6 +15,8 @@ export default function Dashboard() {
   const [countries, setCountries] = useState<string[]>([]);
   const [selectedVisitor, setSelectedVisitor] = useState<number | null>(null);
   const [showScriptModal, setShowScriptModal] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   
   // Filters
   const [searchQuery, setSearchQuery] = useState('');
@@ -28,22 +30,38 @@ export default function Dashboard() {
     // Fetch initial data
     fetchVisitors();
 
-    // Setup Server-Sent Events for realtime updates
-    const eventSource = new EventSource('/api/visitors/stream');
+    // Setup Server-Sent Events for realtime updates (only if no error)
+    let eventSource: EventSource | null = null;
+    
+    if (!error) {
+      try {
+        eventSource = new EventSource('/api/visitors/stream');
 
-    eventSource.onmessage = (event) => {
-      const updatedVisitors = JSON.parse(event.data);
-      setVisitors(updatedVisitors);
-    };
+        eventSource.onmessage = (event) => {
+          try {
+            const updatedVisitors = JSON.parse(event.data);
+            setVisitors(updatedVisitors);
+            setError(null);
+          } catch (e) {
+            console.error('Failed to parse SSE data:', e);
+          }
+        };
 
-    eventSource.onerror = () => {
-      console.error('SSE connection error, will retry...');
-    };
+        eventSource.onerror = (e) => {
+          console.error('SSE connection error:', e);
+          // Don't show error to user, just log it
+        };
+      } catch (e) {
+        console.error('Failed to setup SSE:', e);
+      }
+    }
 
     return () => {
-      eventSource.close();
+      if (eventSource) {
+        eventSource.close();
+      }
     };
-  }, []);
+  }, [error]);
 
   // Apply filters
   useEffect(() => {
@@ -99,12 +117,35 @@ export default function Dashboard() {
 
   async function fetchVisitors() {
     try {
+      setLoading(true);
+      setError(null);
+      
       const res = await fetch('/api/visitors');
+      
+      if (!res.ok) {
+        throw new Error(`API returned ${res.status}: ${res.statusText}`);
+      }
+      
       const data = await res.json();
-      setVisitors(data.visitors);
-      setCountries(data.countries);
-    } catch (error) {
+      
+      if (data.visitors && Array.isArray(data.visitors)) {
+        setVisitors(data.visitors);
+      } else {
+        setVisitors([]);
+      }
+      
+      if (data.countries && Array.isArray(data.countries)) {
+        setCountries(data.countries);
+      } else {
+        setCountries([]);
+      }
+    } catch (error: any) {
       console.error('Failed to fetch visitors:', error);
+      setError(error.message || 'Failed to load data');
+      setVisitors([]);
+      setCountries([]);
+    } finally {
+      setLoading(false);
     }
   }
 
@@ -117,6 +158,49 @@ export default function Dashboard() {
 
     const url = `/api/export?${params.toString()}`;
     window.open(url, '_blank');
+  }
+
+  // Error UI
+  if (error) {
+    return (
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-950 flex items-center justify-center p-4">
+        <div className="max-w-md w-full bg-white dark:bg-gray-900 rounded-lg shadow-xl p-8">
+          <div className="text-center">
+            <div className="text-red-500 text-5xl mb-4">⚠️</div>
+            <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
+              Database Connection Error
+            </h2>
+            <p className="text-gray-600 dark:text-gray-400 mb-6">
+              {error}
+            </p>
+            <button
+              onClick={fetchVisitors}
+              className="px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-colors"
+            >
+              Retry Connection
+            </button>
+            <div className="mt-4 text-sm text-gray-500">
+              <p>Debug endpoints:</p>
+              <a href="/api/debug" target="_blank" className="text-blue-600 hover:underline">
+                /api/debug
+              </a>
+            </div>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Loading UI
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-950 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600 dark:text-gray-400">Loading dashboard...</p>
+        </div>
+      </div>
+    );
   }
 
   return (
@@ -142,7 +226,7 @@ export default function Dashboard() {
               </button>
               <button
                 onClick={() => setShowScriptModal(true)}
-                className="px-4 py-2 text-sm font-medium text-white bg-primary rounded-lg hover:bg-blue-600 transition-colors"
+                className="px-4 py-2 text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors"
               >
                 Get Tracking Script
               </button>
