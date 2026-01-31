@@ -8,10 +8,18 @@ interface TrackingScriptModalProps {
 
 export default function TrackingScriptModal({ onClose }: TrackingScriptModalProps) {
   const [copied, setCopied] = useState(false);
+  const [scriptType, setScriptType] = useState<'basic' | 'advanced'>('advanced');
 
   // Generate script for current domain
   const baseUrl = typeof window !== 'undefined' ? window.location.origin : 'https://your-domain.com';
-  const scriptCode = `<script src="${baseUrl}/track.js" async></script>`;
+  
+  const basicScriptCode = `<script src="${baseUrl}/track.js" async></script>`;
+  
+  const advancedScriptCode = `<!-- LeadTracker Advanced Analytics -->
+<script src="https://cdn.jsdelivr.net/npm/rrweb@latest/dist/rrweb.min.js" async></script>
+<script src="${baseUrl}/leadtracker-advanced.js" async></script>`;
+
+  const scriptCode = scriptType === 'basic' ? basicScriptCode : advancedScriptCode;
 
   function copyToClipboard() {
     navigator.clipboard.writeText(scriptCode);
@@ -37,6 +45,44 @@ export default function TrackingScriptModal({ onClose }: TrackingScriptModalProp
         </div>
 
         <div className="space-y-4">
+          {/* Script Type Selector */}
+          <div className="flex gap-2 mb-4">
+            <button
+              onClick={() => setScriptType('basic')}
+              className={`flex-1 px-4 py-2 rounded-lg font-medium transition-colors ${
+                scriptType === 'basic'
+                  ? 'bg-blue-600 text-white'
+                  : 'bg-gray-200 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-700'
+              }`}
+            >
+              Basic Tracking
+            </button>
+            <button
+              onClick={() => setScriptType('advanced')}
+              className={`flex-1 px-4 py-2 rounded-lg font-medium transition-colors ${
+                scriptType === 'advanced'
+                  ? 'bg-blue-600 text-white'
+                  : 'bg-gray-200 dark:bg-gray-800 text-gray-700 dark:text-gray-300 hover:bg-gray-300 dark:hover:bg-gray-700'
+              }`}
+            >
+              Advanced Analytics
+            </button>
+          </div>
+
+          {scriptType === 'advanced' && (
+            <div className="bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-900 rounded-lg p-4 mb-4">
+              <h4 className="text-sm font-semibold text-blue-900 dark:text-blue-100 mb-2">
+                ✨ Advanced Features Included
+              </h4>
+              <ul className="text-sm text-blue-800 dark:text-blue-200 space-y-1">
+                <li>• 🎬 Session Recording & Replay</li>
+                <li>• 📊 Funnel Tracking & Analytics</li>
+                <li>• 🔥 Click & Scroll Heatmaps</li>
+                <li>• 📈 Enhanced Event Tracking</li>
+              </ul>
+            </div>
+          )}
+
           <div>
             <h3 className="text-lg font-semibold text-gray-900 dark:text-white mb-2">
               Step 1: Copy the Script

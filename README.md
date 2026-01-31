@@ -8,6 +8,7 @@ LeadTracker is a free, open-source alternative to Leadinfo and Leadfeeder. Ident
 
 ## ✨ Features
 
+### Core Features
 - 🔴 **Real-time Dashboard** - See companies visiting your site right now using Server-Sent Events
 - 🌍 **Reverse IP Lookup** - Automatically identify companies from IP addresses (ipapi.co)
 - 📊 **Visitor Analytics** - Track page views, session duration, and visitor behavior
@@ -15,7 +16,16 @@ LeadTracker is a free, open-source alternative to Leadinfo and Leadfeeder. Ident
 - 📥 **CSV Export** - Export visitor data for CRM import or analysis
 - 🔐 **Privacy-First** - No cookies, respects DNT, GDPR-friendly
 - 🚀 **Lightweight Tracking** - <2KB script, async loading, zero page speed impact
-- 💾 **Self-Hosted** - Your data stays on your server (SQLite database)
+- 💾 **Production-Ready** - Vercel Postgres database, scalable architecture
+
+### 🎬 Advanced Analytics (NEW!)
+- **Session Recording & Replay** - Watch exactly how visitors interact with your site (like Hotjar)
+- **Conversion Funnel Analytics** - Track multi-step user journeys and identify drop-off points (like Mixpanel)
+- **Click & Scroll Heatmaps** - Visualize where users click and scroll on your pages (like Crazy Egg)
+- **Event Tracking** - Track custom events, form submissions, and user actions
+- **Advanced Visualization** - Sankey diagrams, heatmap overlays, and interactive replays
+
+> 📖 **See [ADVANCED_FEATURES.md](ADVANCED_FEATURES.md) for detailed documentation**
 
 ## 🚀 Quick Start
 
@@ -206,12 +216,20 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## 🔮 Roadmap
 
+### ✅ Completed
+- [x] Session Recording & Replay
+- [x] Conversion Funnel Analytics
+- [x] Click & Scroll Heatmaps
+- [x] Advanced Event Tracking
+
+### 🚧 Planned
 - [ ] Email notifications for high-value visitors
 - [ ] Slack/Discord webhook integrations
 - [ ] Lead scoring based on page views and engagement
 - [ ] CRM integrations (HubSpot, Salesforce, Pipedrive)
 - [ ] Custom company databases (Clearbit, etc.)
-- [ ] Analytics dashboard with trends and insights
+- [ ] AI-powered funnel insights
+- [ ] A/B testing heatmap comparison
 
 ## 📧 Support
 
