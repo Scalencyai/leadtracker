@@ -1,14 +1,16 @@
 services:
   - type: web
     name: leadtracker
-    env: node
+    runtime: node
     plan: free
+    branch: main
     buildCommand: npm install && npm run build
     startCommand: npm start
     envVars:
       - key: NODE_ENV
         value: production
       - key: DASHBOARD_PASSWORD
-        generateValue: true
+        value: demo123
       - key: DATA_RETENTION_DAYS
         value: 30
+    healthCheckPath: /
