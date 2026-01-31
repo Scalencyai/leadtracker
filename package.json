@@ -10,22 +10,21 @@
     "db:init": "node scripts/init-db.js"
   },
   "dependencies": {
+    "better-sqlite3": "^12.6.2",
     "next": "^14.2.0",
     "react": "^18.3.0",
     "react-dom": "^18.3.0",
-    "sql.js": "^1.13.0"
+    "autoprefixer": "^10.4.17",
+    "postcss": "^8.4.33",
+    "tailwindcss": "^3.4.1",
+    "typescript": "^5.3.3"
   },
   "devDependencies": {
     "@types/better-sqlite3": "^7.6.9",
     "@types/node": "^20.11.0",
     "@types/react": "^18.3.0",
     "@types/react-dom": "^18.3.0",
-    "@types/sql.js": "^1.4.9",
-    "autoprefixer": "^10.4.17",
     "eslint": "^8.57.1",
-    "eslint-config-next": "^14.2.35",
-    "postcss": "^8.4.33",
-    "tailwindcss": "^3.4.1",
-    "typescript": "^5.3.3"
+    "eslint-config-next": "^14.2.35"
   }
 }
