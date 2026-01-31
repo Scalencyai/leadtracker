@@ -2,16 +2,17 @@ import { NextRequest, NextResponse } from 'next/server';
 
 export const runtime = 'nodejs';
 
+const DASHBOARD_PASSWORD = 'demo123'; // Hardcoded for now
+
 export async function POST(request: NextRequest) {
   try {
     const { password } = await request.json();
-    const correctPassword = process.env.DASHBOARD_PASSWORD || 'demo123';
 
-    if (password === correctPassword) {
+    if (password === DASHBOARD_PASSWORD) {
       const response = NextResponse.json({ success: true });
       
       // Set auth cookie
-      response.cookies.set('leadtracker_auth', password, {
+      response.cookies.set('leadtracker_auth', DASHBOARD_PASSWORD, {
         httpOnly: true,
         secure: process.env.NODE_ENV === 'production',
         sameSite: 'strict',
