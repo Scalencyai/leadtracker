@@ -6,6 +6,7 @@ import StatsCards from '@/components/StatsCards';
 import Filters from '@/components/Filters';
 import TrackingScriptModal from '@/components/TrackingScriptModal';
 import VisitorDetailPanel from '@/components/VisitorDetailPanel';
+import InstallationChecker from '@/components/InstallationChecker';
 import type { VisitorWithStats } from '@/lib/db';
 
 export default function Dashboard() {
@@ -153,6 +154,11 @@ export default function Dashboard() {
       {/* Main Content */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <StatsCards visitors={filteredVisitors} />
+
+        {/* Installation Checker */}
+        <div className="mt-8">
+          <InstallationChecker />
+        </div>
 
         <div className="mt-8">
           <Filters
