@@ -36,3 +36,5 @@ Thumbs.db
 
 # Build artifacts
 .build-pid
+.vercel
+.env*.local
