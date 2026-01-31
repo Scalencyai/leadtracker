@@ -1,23 +1,11 @@
 import { sql } from '@vercel/postgres';
-import { createPool } from '@vercel/postgres';
 
-// Get the connection string - check both test_ prefix and normal
-const connectionString = 
-  process.env.test_POSTGRES_URL || 
-  process.env.POSTGRES_URL ||
-  process.env.DATABASE_URL;
-
-// Create custom pool with connection string
-export const db = connectionString 
-  ? createPool({ connectionString })
-  : sql;
-
-// Use the pool for queries
-const query = db.sql || sql;
+// All functions use the sql client directly from @vercel/postgres
+// No need for custom pool setup
 
 // Initialize database schema
 export async function initDb() {
-  await query`
+  await sql`
     CREATE TABLE IF NOT EXISTS visitors (
       id SERIAL PRIMARY KEY,
       ip_address TEXT NOT NULL UNIQUE,
@@ -82,20 +70,20 @@ export interface VisitorWithStats extends Visitor {
 // Get or create visitor by IP
 export async function getOrCreateVisitor(ipAddress: string, timestamp: number): Promise<Visitor> {
   // Try to get existing visitor
-  const existing = await query`
+  const existing = await sql`
     SELECT * FROM visitors WHERE ip_address = ${ipAddress}
   `;
 
   if (existing.rows.length > 0) {
     // Update last_seen
-    await query`
+    await sql`
       UPDATE visitors SET last_seen = ${timestamp} WHERE ip_address = ${ipAddress}
     `;
     return { ...existing.rows[0], last_seen: timestamp } as Visitor;
   }
 
   // Insert new visitor
-  const result = await query`
+  const result = await sql`
     INSERT INTO visitors (ip_address, first_seen, last_seen)
     VALUES (${ipAddress}, ${timestamp}, ${timestamp})
     RETURNING *
@@ -112,7 +100,7 @@ export async function addPageView(
   userAgent: string | null,
   timestamp: number
 ): Promise<PageView> {
-  const result = await query`
+  const result = await sql`
     INSERT INTO page_views (visitor_id, page_url, referrer, user_agent, viewed_at)
     VALUES (${visitorId}, ${pageUrl}, ${referrer}, ${userAgent}, ${timestamp})
     RETURNING *
@@ -134,7 +122,7 @@ export async function updateVisitorLookup(
   }
 ): Promise<void> {
   const timestamp = Date.now();
-  await query`
+  await sql`
     UPDATE visitors
     SET company_name = ${data.company_name},
         country = ${data.country},
@@ -156,29 +144,20 @@ export async function getVisitorsWithStats(filters?: {
   dateTo?: number;
   activeOnly?: boolean;
 }): Promise<VisitorWithStats[]> {
-  let queryParts = [`
-    SELECT 
-      v.*,
-      COUNT(pv.id) as total_visits,
-      STRING_AGG(DISTINCT pv.page_url, ',') as pages_viewed
-    FROM visitors v
-    LEFT JOIN page_views pv ON v.id = pv.visitor_id
-    WHERE 1=1
-  `];
-
-  const conditions: string[] = [];
-
+  // Build WHERE conditions
+  const conditions: string[] = ['1=1'];
+  
   if (filters?.hideBotsAndISPs) {
     conditions.push('v.is_bot = 0 AND v.is_isp = 0');
   }
 
   if (filters?.country) {
-    conditions.push(`v.country = '${filters.country}'`);
+    conditions.push(`v.country = '${filters.country.replace(/'/g, "''")}'`);
   }
 
   if (filters?.search) {
-    const searchPattern = `%${filters.search}%`;
-    conditions.push(`(v.company_name ILIKE '${searchPattern}' OR v.ip_address ILIKE '${searchPattern}')`);
+    const searchPattern = filters.search.replace(/'/g, "''");
+    conditions.push(`(v.company_name ILIKE '%${searchPattern}%' OR v.ip_address ILIKE '%${searchPattern}%')`);
   }
 
   if (filters?.dateFrom) {
@@ -194,14 +173,21 @@ export async function getVisitorsWithStats(filters?: {
     conditions.push(`v.last_seen >= ${fiveMinutesAgo}`);
   }
 
-  if (conditions.length > 0) {
-    queryParts.push('AND ' + conditions.join(' AND '));
-  }
+  const whereClause = conditions.join(' AND ');
+  
+  const queryText = `
+    SELECT 
+      v.*,
+      COUNT(pv.id) as total_visits,
+      STRING_AGG(DISTINCT pv.page_url, ',') as pages_viewed
+    FROM visitors v
+    LEFT JOIN page_views pv ON v.id = pv.visitor_id
+    WHERE ${whereClause}
+    GROUP BY v.id 
+    ORDER BY v.last_seen DESC
+  `;
 
-  queryParts.push('GROUP BY v.id ORDER BY v.last_seen DESC');
-
-  const queryStr = queryParts.join(' ');
-  const result = await query.query(queryStr);
+  const result = await sql.query(queryText);
 
   return result.rows.map(v => ({
     ...v,
@@ -211,13 +197,13 @@ export async function getVisitorsWithStats(filters?: {
 
 // Get visitor details with all page views
 export async function getVisitorDetails(visitorId: number): Promise<{ visitor: Visitor; pageViews: PageView[] } | null> {
-  const visitorResult = await query`
+  const visitorResult = await sql`
     SELECT * FROM visitors WHERE id = ${visitorId}
   `;
 
   if (visitorResult.rows.length === 0) return null;
 
-  const pageViewsResult = await query`
+  const pageViewsResult = await sql`
     SELECT * FROM page_views WHERE visitor_id = ${visitorId} ORDER BY viewed_at DESC
   `;
 
@@ -229,7 +215,7 @@ export async function getVisitorDetails(visitorId: number): Promise<{ visitor: V
 
 // Get unique countries
 export async function getCountries(): Promise<string[]> {
-  const result = await query`
+  const result = await sql`
     SELECT DISTINCT country FROM visitors WHERE country IS NOT NULL ORDER BY country
   `;
   return result.rows.map(r => r.country);
@@ -238,7 +224,7 @@ export async function getCountries(): Promise<string[]> {
 // Clean old data
 export async function cleanOldData(retentionDays: number): Promise<number> {
   const cutoffTime = Date.now() - retentionDays * 24 * 60 * 60 * 1000;
-  const result = await query`
+  const result = await sql`
     DELETE FROM visitors WHERE last_seen < ${cutoffTime}
   `;
   return result.rowCount || 0;
@@ -252,6 +238,6 @@ export function needsLookup(visitor: Visitor): boolean {
   return cacheAge > oneDayMs;
 }
 
-// Export for health checks
-export { query as pool };
-export default query;
+// Export sql for health checks
+export { sql as pool };
+export default sql;
