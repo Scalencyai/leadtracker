@@ -1,52 +1,38 @@
-import { Pool } from 'pg';
-
-// Create connection pool
-const pool = new Pool({
-  connectionString: process.env.DATABASE_URL,
-  ssl: process.env.NODE_ENV === 'production' ? { rejectUnauthorized: false } : false,
-  max: 20,
-  idleTimeoutMillis: 30000,
-  connectionTimeoutMillis: 2000,
-});
+import { sql } from '@vercel/postgres';
 
 // Initialize database schema
 export async function initDb() {
-  const client = await pool.connect();
-  try {
-    await client.query(`
-      CREATE TABLE IF NOT EXISTS visitors (
-        id SERIAL PRIMARY KEY,
-        ip_address TEXT NOT NULL UNIQUE,
-        company_name TEXT,
-        country TEXT,
-        city TEXT,
-        isp TEXT,
-        is_bot INTEGER DEFAULT 0,
-        is_isp INTEGER DEFAULT 0,
-        first_seen BIGINT NOT NULL,
-        last_seen BIGINT NOT NULL,
-        lookup_cached_at BIGINT
-      );
+  await sql`
+    CREATE TABLE IF NOT EXISTS visitors (
+      id SERIAL PRIMARY KEY,
+      ip_address TEXT NOT NULL UNIQUE,
+      company_name TEXT,
+      country TEXT,
+      city TEXT,
+      isp TEXT,
+      is_bot INTEGER DEFAULT 0,
+      is_isp INTEGER DEFAULT 0,
+      first_seen BIGINT NOT NULL,
+      last_seen BIGINT NOT NULL,
+      lookup_cached_at BIGINT
+    );
 
-      CREATE TABLE IF NOT EXISTS page_views (
-        id SERIAL PRIMARY KEY,
-        visitor_id INTEGER NOT NULL,
-        page_url TEXT NOT NULL,
-        referrer TEXT,
-        user_agent TEXT,
-        viewed_at BIGINT NOT NULL,
-        duration INTEGER DEFAULT 0,
-        FOREIGN KEY (visitor_id) REFERENCES visitors(id) ON DELETE CASCADE
-      );
+    CREATE TABLE IF NOT EXISTS page_views (
+      id SERIAL PRIMARY KEY,
+      visitor_id INTEGER NOT NULL,
+      page_url TEXT NOT NULL,
+      referrer TEXT,
+      user_agent TEXT,
+      viewed_at BIGINT NOT NULL,
+      duration INTEGER DEFAULT 0,
+      FOREIGN KEY (visitor_id) REFERENCES visitors(id) ON DELETE CASCADE
+    );
 
-      CREATE INDEX IF NOT EXISTS idx_visitors_last_seen ON visitors(last_seen DESC);
-      CREATE INDEX IF NOT EXISTS idx_visitors_ip ON visitors(ip_address);
-      CREATE INDEX IF NOT EXISTS idx_page_views_visitor ON page_views(visitor_id);
-      CREATE INDEX IF NOT EXISTS idx_page_views_time ON page_views(viewed_at DESC);
-    `);
-  } finally {
-    client.release();
-  }
+    CREATE INDEX IF NOT EXISTS idx_visitors_last_seen ON visitors(last_seen DESC);
+    CREATE INDEX IF NOT EXISTS idx_visitors_ip ON visitors(ip_address);
+    CREATE INDEX IF NOT EXISTS idx_page_views_visitor ON page_views(visitor_id);
+    CREATE INDEX IF NOT EXISTS idx_page_views_time ON page_views(viewed_at DESC);
+  `;
 }
 
 export interface Visitor {
@@ -80,35 +66,27 @@ export interface VisitorWithStats extends Visitor {
 
 // Get or create visitor by IP
 export async function getOrCreateVisitor(ipAddress: string, timestamp: number): Promise<Visitor> {
-  const client = await pool.connect();
-  try {
-    // Try to get existing visitor
-    let result = await client.query(
-      'SELECT * FROM visitors WHERE ip_address = $1',
-      [ipAddress]
-    );
+  // Try to get existing visitor
+  const existing = await sql`
+    SELECT * FROM visitors WHERE ip_address = ${ipAddress}
+  `;
 
-    if (result.rows.length > 0) {
-      // Update last_seen
-      await client.query(
-        'UPDATE visitors SET last_seen = $1 WHERE ip_address = $2',
-        [timestamp, ipAddress]
-      );
-      return { ...result.rows[0], last_seen: timestamp };
-    }
-
-    // Insert new visitor
-    result = await client.query(
-      `INSERT INTO visitors (ip_address, first_seen, last_seen)
-       VALUES ($1, $2, $3)
-       RETURNING *`,
-      [ipAddress, timestamp, timestamp]
-    );
-
-    return result.rows[0];
-  } finally {
-    client.release();
+  if (existing.rows.length > 0) {
+    // Update last_seen
+    await sql`
+      UPDATE visitors SET last_seen = ${timestamp} WHERE ip_address = ${ipAddress}
+    `;
+    return { ...existing.rows[0], last_seen: timestamp } as Visitor;
   }
+
+  // Insert new visitor
+  const result = await sql`
+    INSERT INTO visitors (ip_address, first_seen, last_seen)
+    VALUES (${ipAddress}, ${timestamp}, ${timestamp})
+    RETURNING *
+  `;
+
+  return result.rows[0] as Visitor;
 }
 
 // Add page view
@@ -119,19 +97,13 @@ export async function addPageView(
   userAgent: string | null,
   timestamp: number
 ): Promise<PageView> {
-  const client = await pool.connect();
-  try {
-    const result = await client.query(
-      `INSERT INTO page_views (visitor_id, page_url, referrer, user_agent, viewed_at)
-       VALUES ($1, $2, $3, $4, $5)
-       RETURNING *`,
-      [visitorId, pageUrl, referrer, userAgent, timestamp]
-    );
+  const result = await sql`
+    INSERT INTO page_views (visitor_id, page_url, referrer, user_agent, viewed_at)
+    VALUES (${visitorId}, ${pageUrl}, ${referrer}, ${userAgent}, ${timestamp})
+    RETURNING *
+  `;
 
-    return result.rows[0];
-  } finally {
-    client.release();
-  }
+  return result.rows[0] as PageView;
 }
 
 // Update visitor with IP lookup data
@@ -146,33 +118,18 @@ export async function updateVisitorLookup(
     is_isp: boolean;
   }
 ): Promise<void> {
-  const client = await pool.connect();
-  try {
-    const timestamp = Date.now();
-    await client.query(
-      `UPDATE visitors
-       SET company_name = $1,
-           country = $2,
-           city = $3,
-           isp = $4,
-           is_bot = $5,
-           is_isp = $6,
-           lookup_cached_at = $7
-       WHERE ip_address = $8`,
-      [
-        data.company_name,
-        data.country,
-        data.city,
-        data.isp,
-        data.is_bot ? 1 : 0,
-        data.is_isp ? 1 : 0,
-        timestamp,
-        ipAddress
-      ]
-    );
-  } finally {
-    client.release();
-  }
+  const timestamp = Date.now();
+  await sql`
+    UPDATE visitors
+    SET company_name = ${data.company_name},
+        country = ${data.country},
+        city = ${data.city},
+        isp = ${data.isp},
+        is_bot = ${data.is_bot ? 1 : 0},
+        is_isp = ${data.is_isp ? 1 : 0},
+        lookup_cached_at = ${timestamp}
+    WHERE ip_address = ${ipAddress}
+  `;
 }
 
 // Get all visitors with stats
@@ -184,117 +141,92 @@ export async function getVisitorsWithStats(filters?: {
   dateTo?: number;
   activeOnly?: boolean;
 }): Promise<VisitorWithStats[]> {
-  const client = await pool.connect();
-  try {
-    let query = `
-      SELECT 
-        v.*,
-        COUNT(pv.id) as total_visits,
-        STRING_AGG(DISTINCT pv.page_url, ',') as pages_viewed
-      FROM visitors v
-      LEFT JOIN page_views pv ON v.id = pv.visitor_id
-      WHERE 1=1
-    `;
+  let queryParts = [`
+    SELECT 
+      v.*,
+      COUNT(pv.id) as total_visits,
+      STRING_AGG(DISTINCT pv.page_url, ',') as pages_viewed
+    FROM visitors v
+    LEFT JOIN page_views pv ON v.id = pv.visitor_id
+    WHERE 1=1
+  `];
 
-    const params: any[] = [];
-    let paramIndex = 1;
+  const conditions: string[] = [];
 
-    if (filters?.hideBotsAndISPs) {
-      query += ' AND v.is_bot = 0 AND v.is_isp = 0';
-    }
-
-    if (filters?.country) {
-      query += ` AND v.country = $${paramIndex++}`;
-      params.push(filters.country);
-    }
-
-    if (filters?.search) {
-      query += ` AND (v.company_name ILIKE $${paramIndex} OR v.ip_address ILIKE $${paramIndex + 1})`;
-      const searchPattern = `%${filters.search}%`;
-      params.push(searchPattern, searchPattern);
-      paramIndex += 2;
-    }
-
-    if (filters?.dateFrom) {
-      query += ` AND v.last_seen >= $${paramIndex++}`;
-      params.push(filters.dateFrom);
-    }
-
-    if (filters?.dateTo) {
-      query += ` AND v.last_seen <= $${paramIndex++}`;
-      params.push(filters.dateTo);
-    }
-
-    if (filters?.activeOnly) {
-      const fiveMinutesAgo = Date.now() - 5 * 60 * 1000;
-      query += ` AND v.last_seen >= $${paramIndex++}`;
-      params.push(fiveMinutesAgo);
-    }
-
-    query += ' GROUP BY v.id ORDER BY v.last_seen DESC';
-
-    const result = await client.query(query, params);
-
-    return result.rows.map(v => ({
-      ...v,
-      pages_viewed: v.pages_viewed ? v.pages_viewed.split(',') : [],
-    }));
-  } finally {
-    client.release();
+  if (filters?.hideBotsAndISPs) {
+    conditions.push('v.is_bot = 0 AND v.is_isp = 0');
   }
+
+  if (filters?.country) {
+    conditions.push(`v.country = '${filters.country}'`);
+  }
+
+  if (filters?.search) {
+    const searchPattern = `%${filters.search}%`;
+    conditions.push(`(v.company_name ILIKE '${searchPattern}' OR v.ip_address ILIKE '${searchPattern}')`);
+  }
+
+  if (filters?.dateFrom) {
+    conditions.push(`v.last_seen >= ${filters.dateFrom}`);
+  }
+
+  if (filters?.dateTo) {
+    conditions.push(`v.last_seen <= ${filters.dateTo}`);
+  }
+
+  if (filters?.activeOnly) {
+    const fiveMinutesAgo = Date.now() - 5 * 60 * 1000;
+    conditions.push(`v.last_seen >= ${fiveMinutesAgo}`);
+  }
+
+  if (conditions.length > 0) {
+    queryParts.push('AND ' + conditions.join(' AND '));
+  }
+
+  queryParts.push('GROUP BY v.id ORDER BY v.last_seen DESC');
+
+  const query = queryParts.join(' ');
+  const result = await sql.query(query);
+
+  return result.rows.map(v => ({
+    ...v,
+    pages_viewed: v.pages_viewed ? v.pages_viewed.split(',') : [],
+  })) as VisitorWithStats[];
 }
 
 // Get visitor details with all page views
 export async function getVisitorDetails(visitorId: number): Promise<{ visitor: Visitor; pageViews: PageView[] } | null> {
-  const client = await pool.connect();
-  try {
-    const visitorResult = await client.query(
-      'SELECT * FROM visitors WHERE id = $1',
-      [visitorId]
-    );
+  const visitorResult = await sql`
+    SELECT * FROM visitors WHERE id = ${visitorId}
+  `;
 
-    if (visitorResult.rows.length === 0) return null;
+  if (visitorResult.rows.length === 0) return null;
 
-    const pageViewsResult = await client.query(
-      'SELECT * FROM page_views WHERE visitor_id = $1 ORDER BY viewed_at DESC',
-      [visitorId]
-    );
+  const pageViewsResult = await sql`
+    SELECT * FROM page_views WHERE visitor_id = ${visitorId} ORDER BY viewed_at DESC
+  `;
 
-    return {
-      visitor: visitorResult.rows[0],
-      pageViews: pageViewsResult.rows,
-    };
-  } finally {
-    client.release();
-  }
+  return {
+    visitor: visitorResult.rows[0] as Visitor,
+    pageViews: pageViewsResult.rows as PageView[],
+  };
 }
 
 // Get unique countries
 export async function getCountries(): Promise<string[]> {
-  const client = await pool.connect();
-  try {
-    const result = await client.query(
-      'SELECT DISTINCT country FROM visitors WHERE country IS NOT NULL ORDER BY country'
-    );
-    return result.rows.map(r => r.country);
-  } finally {
-    client.release();
-  }
+  const result = await sql`
+    SELECT DISTINCT country FROM visitors WHERE country IS NOT NULL ORDER BY country
+  `;
+  return result.rows.map(r => r.country);
 }
 
 // Clean old data
 export async function cleanOldData(retentionDays: number): Promise<number> {
-  const client = await pool.connect();
-  try {
-    const cutoffTime = Date.now() - retentionDays * 24 * 60 * 60 * 1000;
-    const result = await client.query(
-      'DELETE FROM visitors WHERE last_seen < $1',
-      [cutoffTime]
-    );
-    return result.rowCount || 0;
-  } finally {
-    client.release();
-  }
+  const cutoffTime = Date.now() - retentionDays * 24 * 60 * 60 * 1000;
+  const result = await sql`
+    DELETE FROM visitors WHERE last_seen < ${cutoffTime}
+  `;
+  return result.rowCount || 0;
 }
 
 // Check if visitor needs IP lookup
@@ -305,6 +237,6 @@ export function needsLookup(visitor: Visitor): boolean {
   return cacheAge > oneDayMs;
 }
 
-// Export pool for health checks
-export { pool };
-export default pool;
+// Export sql for health checks
+export { sql as pool };
+export default sql;

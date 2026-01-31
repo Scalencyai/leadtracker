@@ -1,42 +1,35 @@
 import { NextResponse } from 'next/server';
-import { pool } from '@/lib/db';
+import { sql } from '@vercel/postgres';
 
 export const runtime = 'nodejs';
 
 export async function GET() {
   try {
-    // Test database connection
-    const client = await pool.connect();
-    
-    try {
-      // Check if tables exist
-      const tablesResult = await client.query(`
-        SELECT table_name 
-        FROM information_schema.tables 
-        WHERE table_schema = 'public'
-      `);
+    // Check if tables exist
+    const tablesResult = await sql`
+      SELECT table_name 
+      FROM information_schema.tables 
+      WHERE table_schema = 'public'
+    `;
 
-      const tables = tablesResult.rows.map(r => r.table_name);
+    const tables = tablesResult.rows.map(r => r.table_name);
 
-      // Check environment
-      const env = {
-        hasDatabase: !!process.env.DATABASE_URL,
-        nodeEnv: process.env.NODE_ENV,
-        hasDashboardPassword: !!process.env.DASHBOARD_PASSWORD,
-      };
+    // Check environment
+    const env = {
+      hasPostgresUrl: !!process.env.POSTGRES_URL,
+      nodeEnv: process.env.NODE_ENV,
+      hasDashboardPassword: !!process.env.DASHBOARD_PASSWORD,
+    };
 
-      return NextResponse.json({
-        status: 'ok',
-        database: {
-          connected: true,
-          tables: tables,
-          tableCount: tables.length,
-        },
-        environment: env,
-      });
-    } finally {
-      client.release();
-    }
+    return NextResponse.json({
+      status: 'ok',
+      database: {
+        connected: true,
+        tables: tables,
+        tableCount: tables.length,
+      },
+      environment: env,
+    });
   } catch (error: any) {
     return NextResponse.json({
       status: 'error',
