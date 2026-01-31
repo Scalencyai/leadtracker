@@ -15,7 +15,7 @@ export async function GET(
       return NextResponse.json({ error: 'Invalid visitor ID' }, { status: 400 });
     }
 
-    const details = getVisitorDetails(visitorId);
+    const details = await getVisitorDetails(visitorId);
 
     if (!details) {
       return NextResponse.json({ error: 'Visitor not found' }, { status: 404 });

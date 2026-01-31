@@ -17,7 +17,7 @@ export async function GET(request: NextRequest) {
       dateTo: searchParams.get('dateTo') ? parseInt(searchParams.get('dateTo')!) : undefined,
     };
 
-    const visitors = getVisitorsWithStats(filters);
+    const visitors = await getVisitorsWithStats(filters);
 
     // Generate CSV
     const headers = ['Company Name', 'Country', 'City', 'First Seen', 'Last Seen', 'Total Visits', 'Pages Viewed'];

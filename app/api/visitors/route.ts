@@ -17,8 +17,8 @@ export async function GET(request: NextRequest) {
       dateTo: searchParams.get('dateTo') ? parseInt(searchParams.get('dateTo')!) : undefined,
     };
 
-    const visitors = getVisitorsWithStats(filters);
-    const countries = getCountries();
+    const visitors = await getVisitorsWithStats(filters);
+    const countries = await getCountries();
 
     return NextResponse.json({ visitors, countries });
   } catch (error) {

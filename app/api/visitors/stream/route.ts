@@ -11,9 +11,9 @@ export async function GET(request: NextRequest) {
   const stream = new ReadableStream({
     async start(controller) {
       // Send initial data
-      const sendUpdate = () => {
+      const sendUpdate = async () => {
         try {
-          const visitors = getVisitorsWithStats({ hideBotsAndISPs: true });
+          const visitors = await getVisitorsWithStats({ hideBotsAndISPs: true });
           const data = `data: ${JSON.stringify(visitors)}\n\n`;
           controller.enqueue(encoder.encode(data));
         } catch (error) {

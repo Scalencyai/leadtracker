@@ -62,16 +62,16 @@ export async function POST(request: NextRequest) {
     }
 
     // Get or create visitor
-    const visitor = getOrCreateVisitor(ip, timestamp);
+    const visitor = await getOrCreateVisitor(ip, timestamp);
 
     // Add page view
-    addPageView(visitor.id, url, referrer, userAgent, timestamp);
+    await addPageView(visitor.id, url, referrer, userAgent, timestamp);
 
     // Perform IP lookup if needed (async, don't block response)
     if (needsLookup(visitor)) {
       lookupIP(ip, userAgent)
-        .then(lookupData => {
-          updateVisitorLookup(ip, lookupData);
+        .then(async lookupData => {
+          await updateVisitorLookup(ip, lookupData);
         })
         .catch(err => {
           console.error('IP lookup failed for', ip, err);

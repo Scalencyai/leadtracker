@@ -1,30 +1,57 @@
-import Database from 'better-sqlite3';
+import initSqlJs, { Database as SqlJsDatabase } from 'sql.js';
+import fs from 'fs';
 import path from 'path';
 
-let db: Database.Database | null = null;
+let db: SqlJsDatabase | null = null;
+let SQL: any = null;
+
+const DB_PATH = path.join(process.cwd(), 'leadtracker.db');
+
+// Initialize SQL.js
+async function initSQL() {
+  if (!SQL) {
+    SQL = await initSqlJs({
+      locateFile: (file: string) => `https://sql.js.org/dist/${file}`
+    });
+  }
+  return SQL;
+}
 
 // Lazy database connection
-function getDb(): Database.Database {
+async function getDb(): Promise<SqlJsDatabase> {
   if (!db) {
-    const dbPath = path.join(process.cwd(), 'leadtracker.db');
-    db = new Database(dbPath);
+    await initSQL();
     
-    // Enable WAL mode for better concurrent access
-    db.pragma('journal_mode = WAL');
+    // Load existing database or create new one
+    if (fs.existsSync(DB_PATH)) {
+      const buffer = fs.readFileSync(DB_PATH);
+      db = new SQL.Database(buffer);
+    } else {
+      db = new SQL.Database();
+    }
     
     // Initialize schema
-    initDb();
+    await initDb();
   }
-  return db;
+  return db!;
+}
+
+// Save database to disk
+function saveDb() {
+  if (db) {
+    const data = db.export();
+    const buffer = Buffer.from(data);
+    fs.writeFileSync(DB_PATH, buffer);
+  }
 }
 
 // Initialize database schema
-export function initDb() {
-  const database = getDb();
-  database.exec(`
+export async function initDb() {
+  const database = await getDb();
+  database.run(`
     CREATE TABLE IF NOT EXISTS visitors (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
-      ip_address TEXT NOT NULL,
+      ip_address TEXT NOT NULL UNIQUE,
       company_name TEXT,
       country TEXT,
       city TEXT,
@@ -33,8 +60,7 @@ export function initDb() {
       is_isp INTEGER DEFAULT 0,
       first_seen INTEGER NOT NULL,
       last_seen INTEGER NOT NULL,
-      lookup_cached_at INTEGER,
-      UNIQUE(ip_address)
+      lookup_cached_at INTEGER
     );
 
     CREATE TABLE IF NOT EXISTS page_views (
@@ -53,6 +79,7 @@ export function initDb() {
     CREATE INDEX IF NOT EXISTS idx_page_views_visitor ON page_views(visitor_id);
     CREATE INDEX IF NOT EXISTS idx_page_views_time ON page_views(viewed_at DESC);
   `);
+  saveDb();
 }
 
 export interface Visitor {
@@ -85,22 +112,41 @@ export interface VisitorWithStats extends Visitor {
 }
 
 // Get or create visitor by IP
-export function getOrCreateVisitor(ipAddress: string, timestamp: number): Visitor {
-  const database = getDb();
-  const existing = database.prepare('SELECT * FROM visitors WHERE ip_address = ?').get(ipAddress) as Visitor | undefined;
+export async function getOrCreateVisitor(ipAddress: string, timestamp: number): Promise<Visitor> {
+  const database = await getDb();
+  const result = database.exec('SELECT * FROM visitors WHERE ip_address = ?', [ipAddress]);
   
-  if (existing) {
-    database.prepare('UPDATE visitors SET last_seen = ? WHERE ip_address = ?').run(timestamp, ipAddress);
-    return { ...existing, last_seen: timestamp };
+  if (result.length > 0 && result[0].values.length > 0) {
+    const row = result[0].values[0];
+    database.run('UPDATE visitors SET last_seen = ? WHERE ip_address = ?', [timestamp, ipAddress]);
+    saveDb();
+    
+    return {
+      id: row[0] as number,
+      ip_address: row[1] as string,
+      company_name: row[2] as string | null,
+      country: row[3] as string | null,
+      city: row[4] as string | null,
+      isp: row[5] as string | null,
+      is_bot: row[6] as number,
+      is_isp: row[7] as number,
+      first_seen: row[8] as number,
+      last_seen: timestamp,
+      lookup_cached_at: row[10] as number | null,
+    };
   }
 
-  const result = database.prepare(`
+  database.run(`
     INSERT INTO visitors (ip_address, first_seen, last_seen)
     VALUES (?, ?, ?)
-  `).run(ipAddress, timestamp, timestamp);
+  `, [ipAddress, timestamp, timestamp]);
+  saveDb();
+  
+  const newResult = database.exec('SELECT last_insert_rowid()');
+  const id = newResult[0].values[0][0] as number;
 
   return {
-    id: Number(result.lastInsertRowid),
+    id,
     ip_address: ipAddress,
     company_name: null,
     country: null,
@@ -115,15 +161,25 @@ export function getOrCreateVisitor(ipAddress: string, timestamp: number): Visito
 }
 
 // Add page view
-export function addPageView(visitorId: number, pageUrl: string, referrer: string | null, userAgent: string | null, timestamp: number): PageView {
-  const database = getDb();
-  const result = database.prepare(`
+export async function addPageView(
+  visitorId: number,
+  pageUrl: string,
+  referrer: string | null,
+  userAgent: string | null,
+  timestamp: number
+): Promise<PageView> {
+  const database = await getDb();
+  database.run(`
     INSERT INTO page_views (visitor_id, page_url, referrer, user_agent, viewed_at)
     VALUES (?, ?, ?, ?, ?)
-  `).run(visitorId, pageUrl, referrer, userAgent, timestamp);
+  `, [visitorId, pageUrl, referrer, userAgent, timestamp]);
+  saveDb();
+
+  const result = database.exec('SELECT last_insert_rowid()');
+  const id = result[0].values[0][0] as number;
 
   return {
-    id: Number(result.lastInsertRowid),
+    id,
     visitor_id: visitorId,
     page_url: pageUrl,
     referrer,
@@ -134,7 +190,7 @@ export function addPageView(visitorId: number, pageUrl: string, referrer: string
 }
 
 // Update visitor with IP lookup data
-export function updateVisitorLookup(
+export async function updateVisitorLookup(
   ipAddress: string,
   data: {
     company_name: string | null;
@@ -144,10 +200,10 @@ export function updateVisitorLookup(
     is_bot: boolean;
     is_isp: boolean;
   }
-): void {
-  const database = getDb();
+): Promise<void> {
+  const database = await getDb();
   const timestamp = Date.now();
-  database.prepare(`
+  database.run(`
     UPDATE visitors
     SET company_name = ?,
         country = ?,
@@ -157,7 +213,7 @@ export function updateVisitorLookup(
         is_isp = ?,
         lookup_cached_at = ?
     WHERE ip_address = ?
-  `).run(
+  `, [
     data.company_name,
     data.country,
     data.city,
@@ -166,19 +222,20 @@ export function updateVisitorLookup(
     data.is_isp ? 1 : 0,
     timestamp,
     ipAddress
-  );
+  ]);
+  saveDb();
 }
 
 // Get all visitors with stats
-export function getVisitorsWithStats(filters?: {
+export async function getVisitorsWithStats(filters?: {
   hideBotsAndISPs?: boolean;
   country?: string;
   search?: string;
   dateFrom?: number;
   dateTo?: number;
   activeOnly?: boolean;
-}): VisitorWithStats[] {
-  const database = getDb();
+}): Promise<VisitorWithStats[]> {
+  const database = await getDb();
   let query = `
     SELECT 
       v.*,
@@ -224,41 +281,84 @@ export function getVisitorsWithStats(filters?: {
 
   query += ' GROUP BY v.id ORDER BY v.last_seen DESC';
 
-  const visitors = database.prepare(query).all(...params) as any[];
+  const result = database.exec(query, params);
+  if (result.length === 0) return [];
 
-  return visitors.map(v => ({
-    ...v,
-    pages_viewed: v.pages_viewed ? v.pages_viewed.split(',') : [],
-  }));
+  const columns = result[0].columns;
+  const rows = result[0].values;
+
+  return rows.map(row => {
+    const visitor: any = {};
+    columns.forEach((col, idx) => {
+      visitor[col] = row[idx];
+    });
+    visitor.pages_viewed = visitor.pages_viewed ? visitor.pages_viewed.split(',') : [];
+    return visitor as VisitorWithStats;
+  });
 }
 
 // Get visitor details with all page views
-export function getVisitorDetails(visitorId: number): { visitor: Visitor; pageViews: PageView[] } | null {
-  const database = getDb();
-  const visitor = database.prepare('SELECT * FROM visitors WHERE id = ?').get(visitorId) as Visitor | undefined;
-  if (!visitor) return null;
+export async function getVisitorDetails(visitorId: number): Promise<{ visitor: Visitor; pageViews: PageView[] } | null> {
+  const database = await getDb();
+  
+  const visitorResult = database.exec('SELECT * FROM visitors WHERE id = ?', [visitorId]);
+  if (visitorResult.length === 0 || visitorResult[0].values.length === 0) return null;
 
-  const pageViews = database.prepare('SELECT * FROM page_views WHERE visitor_id = ? ORDER BY viewed_at DESC').all(visitorId) as PageView[];
+  const vRow = visitorResult[0].values[0];
+  const visitor: Visitor = {
+    id: vRow[0] as number,
+    ip_address: vRow[1] as string,
+    company_name: vRow[2] as string | null,
+    country: vRow[3] as string | null,
+    city: vRow[4] as string | null,
+    isp: vRow[5] as string | null,
+    is_bot: vRow[6] as number,
+    is_isp: vRow[7] as number,
+    first_seen: vRow[8] as number,
+    last_seen: vRow[9] as number,
+    lookup_cached_at: vRow[10] as number | null,
+  };
+
+  const pvResult = database.exec('SELECT * FROM page_views WHERE visitor_id = ? ORDER BY viewed_at DESC', [visitorId]);
+  const pageViews: PageView[] = [];
+  
+  if (pvResult.length > 0) {
+    pvResult[0].values.forEach(row => {
+      pageViews.push({
+        id: row[0] as number,
+        visitor_id: row[1] as number,
+        page_url: row[2] as string,
+        referrer: row[3] as string | null,
+        user_agent: row[4] as string | null,
+        viewed_at: row[5] as number,
+        duration: row[6] as number,
+      });
+    });
+  }
 
   return { visitor, pageViews };
 }
 
 // Get unique countries
-export function getCountries(): string[] {
-  const database = getDb();
-  const rows = database.prepare('SELECT DISTINCT country FROM visitors WHERE country IS NOT NULL ORDER BY country').all() as { country: string }[];
-  return rows.map(r => r.country);
+export async function getCountries(): Promise<string[]> {
+  const database = await getDb();
+  const result = database.exec('SELECT DISTINCT country FROM visitors WHERE country IS NOT NULL ORDER BY country');
+  if (result.length === 0) return [];
+  return result[0].values.map(row => row[0] as string);
 }
 
 // Clean old data
-export function cleanOldData(retentionDays: number): number {
-  const database = getDb();
+export async function cleanOldData(retentionDays: number): Promise<number> {
+  const database = await getDb();
   const cutoffTime = Date.now() - retentionDays * 24 * 60 * 60 * 1000;
-  const result = database.prepare('DELETE FROM visitors WHERE last_seen < ?').run(cutoffTime);
-  return result.changes;
+  database.run('DELETE FROM visitors WHERE last_seen < ?', [cutoffTime]);
+  saveDb();
+  
+  const result = database.exec('SELECT changes()');
+  return result[0].values[0][0] as number;
 }
 
-// Check if visitor needs IP lookup (not cached or cache expired)
+// Check if visitor needs IP lookup
 export function needsLookup(visitor: Visitor): boolean {
   if (!visitor.lookup_cached_at) return true;
   const cacheAge = Date.now() - visitor.lookup_cached_at;
