@@ -9,6 +9,8 @@ services:
     envVars:
       - key: NODE_ENV
         value: production
+      - key: DATABASE_URL
+        sync: false
       - key: DASHBOARD_PASSWORD
         value: demo123
       - key: DATA_RETENTION_DAYS
