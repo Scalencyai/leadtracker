@@ -35,7 +35,10 @@
       hash = hash & hash; // Convert to 32bit integer
     }
     
-    var clientId = 'client_' + Math.abs(hash).toString(36);
+    // Create readable visitor ID
+    var hashStr = Math.abs(hash).toString(36).toUpperCase();
+    var visitorNum = Math.abs(hash) % 9999 + 1;
+    var clientId = 'Visitor-' + visitorNum + '-' + hashStr.substr(0, 4);
     localStorage.setItem('leadtracker_client_id', clientId);
     return clientId;
   }

@@ -30,7 +30,7 @@ export default function VisitorTable({ visitors, onSelectVisitor }: VisitorTable
           <thead className="bg-gray-50 dark:bg-gray-800 border-b border-gray-200 dark:border-gray-700">
             <tr>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
-                Company
+                Company / Visitor
               </th>
               <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wider">
                 Location
@@ -95,16 +95,9 @@ function VisitorRow({ visitor, onClick }: { visitor: VisitorWithStats; onClick: 
             <div className="text-sm font-medium text-gray-900 dark:text-white">
               {companyName}
             </div>
-            {visitor.company_name && (
-              <div className="text-xs text-gray-500 dark:text-gray-400 font-mono">
-                {visitor.ip_address}
-              </div>
-            )}
-            {!visitor.company_name && (
-              <div className="text-xs text-gray-500 dark:text-gray-400 font-mono">
-                IP: {visitor.ip_address}
-              </div>
-            )}
+            <div className="text-xs text-gray-500 dark:text-gray-400 font-mono">
+              {visitor.ip_address}
+            </div>
           </div>
         </div>
       </td>
@@ -113,17 +106,17 @@ function VisitorRow({ visitor, onClick }: { visitor: VisitorWithStats; onClick: 
       </td>
       <td className="px-6 py-4 text-sm text-gray-700 dark:text-gray-300">
         {formatTime(visitor.last_seen)}
-        {isActive && (
-          <span className="ml-2 inline-flex items-center px-2 py-0.5 rounded text-xs font-medium bg-green-100 dark:bg-green-900 text-green-800 dark:text-green-200">
-            Now
-          </span>
-        )}
       </td>
       <td className="px-6 py-4 text-sm text-gray-700 dark:text-gray-300">
-        {visitor.total_visits}
+        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-primary-100 text-primary-800 dark:bg-blue-900 dark:text-blue-200">
+          {visitor.total_visits}
+        </span>
       </td>
-      <td className="px-6 py-4 text-sm text-gray-500 dark:text-gray-400">
-        {visitor.pages_viewed.length} pages
+      <td className="px-6 py-4">
+        <div className="text-xs text-gray-500 dark:text-gray-400 max-w-xs truncate">
+          {visitor.pages_viewed.slice(0, 3).join(', ')}
+          {visitor.pages_viewed.length > 3 && ` +${visitor.pages_viewed.length - 3} more`}
+        </div>
       </td>
     </tr>
   );

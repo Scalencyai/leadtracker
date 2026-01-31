@@ -20,7 +20,7 @@ export default function Dashboard() {
   const [selectedCountry, setSelectedCountry] = useState('');
   const [dateRange, setDateRange] = useState('all');
   const [activeOnly, setActiveOnly] = useState(false);
-  const [hideBotsAndISPs, setHideBotsAndISPs] = useState(true);
+  const [hideBotsAndISPs, setHideBotsAndISPs] = useState(false);
 
   // Load data from localStorage
   useEffect(() => {
