@@ -11,7 +11,7 @@ export default function TrackingScriptModal({ onClose }: TrackingScriptModalProp
 
   // Generate script for current domain
   const baseUrl = typeof window !== 'undefined' ? window.location.origin : 'https://your-domain.com';
-  const scriptCode = `<script src="${baseUrl}/track.js" data-api="${baseUrl}/api/track" async></script>`;
+  const scriptCode = `<script src="${baseUrl}/track.js" async></script>`;
 
   function copyToClipboard() {
     navigator.clipboard.writeText(scriptCode);
@@ -65,10 +65,11 @@ export default function TrackingScriptModal({ onClose }: TrackingScriptModalProp
               After installing the script:
             </p>
             <ul className="list-disc list-inside text-sm text-gray-600 dark:text-gray-400 space-y-1">
-              <li>Visit your website from a different device or browser</li>
+              <li>Visit your website</li>
               <li>Open your browser's developer console (F12)</li>
-              <li>Look for successful tracking requests to <code className="bg-gray-100 dark:bg-gray-800 px-1 rounded">/api/track</code></li>
-              <li>Check this dashboard - you should see your visit appear within seconds</li>
+              <li>Look for "✓ LeadTracker: Page view tracked (localStorage)"</li>
+              <li>Check Application → Local Storage → leadtracker_visitors</li>
+              <li>Refresh this dashboard - you should see your visit!</li>
             </ul>
           </div>
 
@@ -77,10 +78,11 @@ export default function TrackingScriptModal({ onClose }: TrackingScriptModalProp
               💡 Privacy & Performance
             </h4>
             <ul className="text-sm text-blue-800 dark:text-blue-200 space-y-1">
-              <li>• The script is under 2KB and loads asynchronously (no impact on page speed)</li>
+              <li>• The script is ~4KB and loads asynchronously (no impact on page speed)</li>
               <li>• Respects Do Not Track (DNT) browser settings</li>
+              <li>• Data stored locally in browser (localStorage) - no server calls!</li>
               <li>• Only collects: page URL, referrer, user agent, and timestamp</li>
-              <li>• No cookies or personal data tracking</li>
+              <li>• 100% client-side - no cookies, no tracking pixels</li>
             </ul>
           </div>
 
