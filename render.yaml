@@ -1,15 +1,11 @@
 services:
   - type: web
     name: leadtracker
-    runtime: node
+    runtime: docker
     plan: free
     branch: main
-    buildCommand: |
-      apt-get update
-      apt-get install -y python3 make g++
-      npm install
-      npm run build
-    startCommand: npm start
+    dockerfilePath: ./Dockerfile
+    dockerCommand: npm start
     envVars:
       - key: NODE_ENV
         value: production
