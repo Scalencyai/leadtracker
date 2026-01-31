@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>LeadTracker Test Page</title>
+    <style>
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            max-width: 800px;
+            margin: 50px auto;
+            padding: 20px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        .card {
+            background: rgba(255, 255, 255, 0.1);
+            backdrop-filter: blur(10px);
+            border-radius: 12px;
+            padding: 30px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+        }
+        h1 { margin-top: 0; }
+        .status {
+            margin-top: 20px;
+            padding: 15px;
+            background: rgba(255, 255, 255, 0.2);
+            border-radius: 8px;
+            font-size: 14px;
+        }
+        .green { color: #10b981; }
+        a {
+            color: #93c5fd;
+            text-decoration: none;
+        }
+        a:hover { text-decoration: underline; }
+    </style>
+</head>
+<body>
+    <div class="card">
+        <h1>🎯 LeadTracker Test Page</h1>
+        <p>This page has the LeadTracker tracking script installed. When you visit this page, your visit should appear in the dashboard within 2 seconds.</p>
+        
+        <h2>How to Test:</h2>
+        <ol>
+            <li>Open the LeadTracker dashboard: <a href="http://localhost:3000/dashboard" target="_blank">http://localhost:3000/dashboard</a></li>
+            <li>Keep the dashboard open in one tab</li>
+            <li>Open this page in another tab/browser</li>
+            <li>Watch the dashboard update in realtime! ✨</li>
+        </ol>
+
+        <div class="status" id="status">
+            <strong>Status:</strong> <span class="green">✓ Tracking script loaded</span><br>
+            <strong>Page URL:</strong> <span id="url"></span><br>
+            <strong>User Agent:</strong> <span id="ua"></span><br>
+            <strong>Timestamp:</strong> <span id="time"></span>
+        </div>
+
+        <h2>What's Being Tracked:</h2>
+        <ul>
+            <li>Your IP address (to identify company)</li>
+            <li>Page URL (this page)</li>
+            <li>Referrer (where you came from)</li>
+            <li>User Agent (browser info)</li>
+            <li>Timestamp (when you visited)</li>
+        </ul>
+
+        <p><em>Note: This is privacy-friendly tracking. No cookies, no personal data, respects Do Not Track.</em></p>
+
+        <h2>Try Visiting Multiple Pages:</h2>
+        <p>
+            <a href="test-page.html?page=home">Home</a> |
+            <a href="test-page.html?page=pricing">Pricing</a> |
+            <a href="test-page.html?page=contact">Contact</a>
+        </p>
+        <p>Each page view will be recorded and visible in the visitor detail panel!</p>
+    </div>
+
+    <script>
+        // Display current page info
+        document.getElementById('url').textContent = window.location.href;
+        document.getElementById('ua').textContent = navigator.userAgent.substring(0, 80) + '...';
+        document.getElementById('time').textContent = new Date().toLocaleString();
+    </script>
+
+    <!-- LeadTracker Tracking Script -->
+    <script src="http://localhost:3000/track.js" data-api="http://localhost:3000/api/track" async></script>
+</body>
+</html>

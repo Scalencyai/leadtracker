@@ -1,0 +1,156 @@
+{
+  "project": "LeadTracker - Free B2B Website Visitor Identification",
+  "branchName": "ralph/leadtracker-v1",
+  "techStack": {
+    "frontend": "Next.js 14 (App Router), React Server Components, TailwindCSS",
+    "backend": "Next.js API Routes, SQLite (better-sqlite3)",
+    "realtime": "Server-Sent Events (SSE)",
+    "ipLookup": "ipapi.co (free tier) / ip-api.com (fallback)",
+    "hosting": "Vercel (free tier)",
+    "auth": "Password protection (env variable)"
+  },
+  "userStories": [
+    {
+      "id": "US-001",
+      "title": "Install Tracking Script",
+      "story": "As a website owner, I want to easily generate and install a tracking script so that I can start identifying visitors immediately.",
+      "acceptanceCriteria": [
+        "User can generate unique tracking script from dashboard",
+        "Script is a simple <script> tag (copy-paste)",
+        "Script loads asynchronously (no page speed impact)",
+        "Script sends visitor data to API endpoint",
+        "Installation guide is clear and includes test verification",
+        "Typecheck/lint passes",
+        "Verify script generator in browser using dev-browser skill"
+      ],
+      "priority": 1,
+      "passes": false
+    },
+    {
+      "id": "US-002",
+      "title": "View Visitor Dashboard (Realtime)",
+      "story": "As a sales person, I want to see which companies are visiting my website right now so that I can reach out while they're researching.",
+      "acceptanceCriteria": [
+        "Dashboard shows list of identified companies in realtime",
+        "Each entry shows: Company name, Location (Country/City), Time of visit, Pages viewed",
+        "Realtime updates using Server-Sent Events (no manual refresh)",
+        "'Now visiting' badge for active sessions (<5 min ago)",
+        "Unidentified visitors show as 'Unknown Company' with IP",
+        "Typecheck/lint passes",
+        "Verify realtime updates in browser"
+      ],
+      "priority": 1,
+      "passes": false
+    },
+    {
+      "id": "US-003",
+      "title": "Reverse IP Lookup",
+      "story": "As the system, I want to automatically identify company names from IP addresses so that users see meaningful visitor data.",
+      "acceptanceCriteria": [
+        "API endpoint receives visitor IP address",
+        "System performs reverse IP lookup using free API (ipapi.co or ip-api.com)",
+        "Response includes: Company name, Country, City, ISP",
+        "Bot/ISP traffic is flagged and can be filtered out",
+        "Lookups are cached (24h) to reduce API calls",
+        "Failed lookups show 'Unknown Company' gracefully",
+        "Typecheck/lint passes"
+      ],
+      "priority": 1,
+      "passes": false
+    },
+    {
+      "id": "US-004",
+      "title": "View Visitor Details",
+      "story": "As a sales person, I want to see detailed visit information for each company so that I can understand their interests and buying intent.",
+      "acceptanceCriteria": [
+        "Click on company row to see detailed view",
+        "Details show: All pages visited (chronological), Time spent on each page, Referrer source, Total session duration, First/Last seen timestamps",
+        "Page URLs are human-readable (not raw paths)",
+        "Typecheck/lint passes",
+        "Verify detail panel in browser"
+      ],
+      "priority": 2,
+      "passes": false
+    },
+    {
+      "id": "US-005",
+      "title": "Filter and Search Visitors",
+      "story": "As a user, I want to filter the visitor list by company name, country, and date range so that I can focus on relevant leads.",
+      "acceptanceCriteria": [
+        "Search box filters by company name (client-side, instant)",
+        "Filter by country (dropdown with all detected countries)",
+        "Filter by date range (Today, Last 7 days, Last 30 days, Custom)",
+        "Filter by 'Active Now' (last 5 minutes)",
+        "Filter by 'Identified Only' (hide Unknown companies)",
+        "Filters are combinable (AND logic)",
+        "Typecheck/lint passes",
+        "Verify all filters work correctly"
+      ],
+      "priority": 2,
+      "passes": false
+    },
+    {
+      "id": "US-006",
+      "title": "Export Visitor Data",
+      "story": "As a user, I want to export visitor data to CSV so that I can import it into my CRM or analyze it further.",
+      "acceptanceCriteria": [
+        "'Export to CSV' button on dashboard",
+        "CSV includes: Company Name, Country, City, First Seen, Last Seen, Total Visits, Pages Viewed",
+        "Export respects current filters",
+        "File downloads with timestamp (e.g., leadtracker_2026-01-31.csv)",
+        "Typecheck/lint passes"
+      ],
+      "priority": 3,
+      "passes": false
+    },
+    {
+      "id": "US-007",
+      "title": "Bot Detection and Filtering",
+      "story": "As the system, I want to filter out bot traffic and ISPs so that users only see real company visits.",
+      "acceptanceCriteria": [
+        "Common bots are detected (Googlebot, Bingbot, etc.) via User-Agent",
+        "ISP traffic is flagged (e.g., Vodafone, Deutsche Telekom)",
+        "Flagged traffic has 'isBot' or 'isISP' boolean",
+        "Dashboard has toggle to 'Show/Hide Bots & ISPs'",
+        "Default: Bots/ISPs are hidden",
+        "Typecheck/lint passes"
+      ],
+      "priority": 2,
+      "passes": false
+    }
+  ],
+  "functionalRequirements": [
+    "Next.js app with Server Components for initial load",
+    "Realtime updates via Server-Sent Events (EventSource API)",
+    "Responsive design (mobile-friendly)",
+    "Dark mode support (system preference)",
+    "Simple authentication (password-protected dashboard)",
+    "Next.js API routes for tracking endpoint and SSE stream",
+    "SQLite database for storing visitor data",
+    "Reverse IP lookup integration with free tier API",
+    "Data retention: 30 days (auto-delete older records)",
+    "Rate limiting on tracking endpoint",
+    "Vanilla JavaScript tracking script (no dependencies)",
+    "Collects: Page URL, Referrer, User-Agent, Timestamp",
+    "Sends data via Beacon API",
+    "Respects Do Not Track (DNT) header",
+    "Tracking script < 2KB minified"
+  ],
+  "nonGoals": [
+    "CRM integrations (HubSpot, Salesforce, etc.)",
+    "Email/LinkedIn outreach features",
+    "Contact database / decision-maker lookup",
+    "Advanced lead scoring algorithms",
+    "Multi-user accounts / team features",
+    "Mobile app",
+    "Webhook notifications",
+    "Custom IP database"
+  ],
+  "successMetrics": {
+    "installation": "User can install tracking script in < 2 minutes",
+    "identificationRate": "40%+ of visitors identified as companies",
+    "realtimePerformance": "Dashboard updates within 2 seconds of page view",
+    "pageSpeed": "Tracking script adds < 100ms to page load",
+    "selfHosting": "Works on Vercel free tier"
+  }
+}
