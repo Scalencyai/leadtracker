@@ -10,6 +10,7 @@
     "db:init": "node scripts/init-db.js"
   },
   "dependencies": {
+    "@vercel/kv": "^3.0.0",
     "@vercel/postgres": "^0.10.0",
     "autoprefixer": "^10.4.17",
     "next": "^14.2.0",

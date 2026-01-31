@@ -6,7 +6,7 @@ import StatsCards from '@/components/StatsCards';
 import Filters from '@/components/Filters';
 import TrackingScriptModal from '@/components/TrackingScriptModal';
 import InstallationChecker from '@/components/InstallationChecker';
-import { getVisitorsWithStats, getCountries, type VisitorWithStats } from '@/lib/storage';
+import type { VisitorWithStats } from '@/lib/types';
 
 export default function Dashboard() {
   const [visitors, setVisitors] = useState<VisitorWithStats[]>([]);
@@ -14,6 +14,8 @@ export default function Dashboard() {
   const [countries, setCountries] = useState<string[]>([]);
   const [selectedVisitor, setSelectedVisitor] = useState<string | number | null>(null);
   const [showScriptModal, setShowScriptModal] = useState(false);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
   
   // Filters
   const [searchQuery, setSearchQuery] = useState('');
@@ -22,12 +24,12 @@ export default function Dashboard() {
   const [activeOnly, setActiveOnly] = useState(false);
   const [hideBotsAndISPs, setHideBotsAndISPs] = useState(false);
 
-  // Load data from localStorage
+  // Load data from API
   useEffect(() => {
-    loadData();
+    fetchVisitors();
     
     // Refresh every 5 seconds
-    const interval = setInterval(loadData, 5000);
+    const interval = setInterval(fetchVisitors, 5000);
     return () => clearInterval(interval);
   }, []);
 
@@ -36,14 +38,47 @@ export default function Dashboard() {
     applyFilters();
   }, [visitors, searchQuery, selectedCountry, dateRange, activeOnly, hideBotsAndISPs]);
 
-  function loadData() {
-    const allVisitors = getVisitorsWithStats({ hideBotsAndISPs });
-    setVisitors(allVisitors);
-    setCountries(getCountries());
+  async function fetchVisitors() {
+    try {
+      setLoading(true);
+      setError(null);
+      
+      const res = await fetch('/api/visitors');
+      
+      if (!res.ok) {
+        throw new Error(`API returned ${res.status}: ${res.statusText}`);
+      }
+      
+      const data = await res.json();
+      
+      if (data.visitors && Array.isArray(data.visitors)) {
+        setVisitors(data.visitors);
+      } else {
+        setVisitors([]);
+      }
+      
+      if (data.countries && Array.isArray(data.countries)) {
+        setCountries(data.countries);
+      } else {
+        setCountries([]);
+      }
+    } catch (error: any) {
+      console.error('Failed to fetch visitors:', error);
+      setError(error.message || 'Failed to load data');
+      setVisitors([]);
+      setCountries([]);
+    } finally {
+      setLoading(false);
+    }
   }
 
   function applyFilters() {
     let filtered = [...visitors];
+
+    // Hide bots and ISPs
+    if (hideBotsAndISPs) {
+      filtered = filtered.filter(v => !v.is_bot && !v.is_isp);
+    }
 
     // Search filter
     if (searchQuery) {
@@ -89,8 +124,11 @@ export default function Dashboard() {
   }
 
   function handleExport() {
-    const { exportData } = require('@/lib/storage');
-    const jsonData = exportData();
+    const jsonData = JSON.stringify({
+      visitors,
+      exportedAt: new Date().toISOString()
+    }, null, 2);
+    
     const blob = new Blob([jsonData], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
@@ -98,6 +136,43 @@ export default function Dashboard() {
     a.download = `leadtracker_${new Date().toISOString().split('T')[0]}.json`;
     a.click();
     URL.revokeObjectURL(url);
+  }
+
+  // Loading UI
+  if (loading && visitors.length === 0) {
+    return (
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-950 flex items-center justify-center">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mx-auto mb-4"></div>
+          <p className="text-gray-600 dark:text-gray-400">Loading dashboard...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // Error UI
+  if (error && visitors.length === 0) {
+    return (
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-950 flex items-center justify-center p-4">
+        <div className="max-w-md w-full bg-white dark:bg-gray-900 rounded-lg shadow-xl p-8">
+          <div className="text-center">
+            <div className="text-red-500 text-5xl mb-4">⚠️</div>
+            <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
+              Connection Error
+            </h2>
+            <p className="text-gray-600 dark:text-gray-400 mb-6">
+              {error}
+            </p>
+            <button
+              onClick={fetchVisitors}
+              className="px-6 py-3 bg-blue-600 hover:bg-blue-700 text-white font-medium rounded-lg transition-colors"
+            >
+              Retry
+            </button>
+          </div>
+        </div>
+      </div>
+    );
   }
 
   return (
@@ -111,7 +186,7 @@ export default function Dashboard() {
                 LeadTracker
               </h1>
               <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
-                Free B2B Website Visitor Identification (LocalStorage)
+                Free B2B Website Visitor Identification (Cookie-based)
               </p>
             </div>
             <div className="flex items-center gap-3">
