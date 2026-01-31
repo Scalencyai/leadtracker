@@ -32,12 +32,12 @@ export async function POST(request: NextRequest) {
 
     const html = await response.text();
 
-    // Check for tracking script
-    const scriptPattern = /leadtracker.*?track\.js/i;
+    // Check for tracking script (flexible pattern for any domain)
+    const scriptPattern = /track\.js/i;
     const hasScript = scriptPattern.test(html);
 
     // Check for tracking endpoint
-    const endpointPattern = /\/api\/track/;
+    const endpointPattern = /api\/track/;
     const hasEndpoint = endpointPattern.test(html);
 
     // Extract script URL if present
