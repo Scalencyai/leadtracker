@@ -30,6 +30,12 @@ export async function GET(
     return NextResponse.json({
       visitor: details.visitor,
       pageViews: details.pageViews
+    }, {
+      headers: {
+        'Cache-Control': 'no-store, no-cache, must-revalidate, max-age=0',
+        'Pragma': 'no-cache',
+        'Expires': '0'
+      }
     });
   } catch (error: any) {
     console.error('Visitor details API error:', error);

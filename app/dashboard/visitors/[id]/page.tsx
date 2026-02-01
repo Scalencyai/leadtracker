@@ -19,7 +19,8 @@ export default function VisitorDetailPage({ params }: { params: { id: string } }
 
   async function fetchDetails() {
     try {
-      const res = await fetch(`/api/visitors/${visitorId}`);
+      // Cache busting to ensure fresh data
+      const res = await fetch(`/api/visitors/${visitorId}?t=${Date.now()}`);
       const data = await res.json();
       
       // Parse timestamps as numbers
