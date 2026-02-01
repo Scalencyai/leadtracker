@@ -14,9 +14,24 @@ export async function POST(request: NextRequest) {
     } catch (e: any) { fixes.push({ table: 'funnel_events', column: 'event_type', status: 'error', error: e.message }); }
 
     try {
+      await sql`ALTER TABLE funnel_events ADD COLUMN IF NOT EXISTS event_name TEXT`;
+      fixes.push({ table: 'funnel_events', column: 'event_name', status: 'added' });
+    } catch (e: any) { fixes.push({ table: 'funnel_events', column: 'event_name', status: 'error', error: e.message }); }
+
+    try {
       await sql`ALTER TABLE funnel_events ADD COLUMN IF NOT EXISTS session_id TEXT`;
       fixes.push({ table: 'funnel_events', column: 'session_id', status: 'added' });
     } catch (e: any) { fixes.push({ table: 'funnel_events', column: 'session_id', status: 'error', error: e.message }); }
+
+    try {
+      await sql`ALTER TABLE funnel_events ADD COLUMN IF NOT EXISTS page_url TEXT`;
+      fixes.push({ table: 'funnel_events', column: 'page_url', status: 'added' });
+    } catch (e: any) { fixes.push({ table: 'funnel_events', column: 'page_url', status: 'error', error: e.message }); }
+
+    try {
+      await sql`ALTER TABLE funnel_events ADD COLUMN IF NOT EXISTS metadata JSONB DEFAULT '{}'`;
+      fixes.push({ table: 'funnel_events', column: 'metadata', status: 'added' });
+    } catch (e: any) { fixes.push({ table: 'funnel_events', column: 'metadata', status: 'error', error: e.message }); }
 
     try {
       await sql`ALTER TABLE funnel_events ADD COLUMN IF NOT EXISTS created_at TIMESTAMP DEFAULT NOW()`;
