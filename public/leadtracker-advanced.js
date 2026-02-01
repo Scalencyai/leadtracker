@@ -31,36 +31,54 @@
   let recordingInterval = null;
 
   function initSessionRecording() {
-    if (typeof rrweb === 'undefined') {
-      console.warn('rrweb not loaded. Session recording disabled.');
-      return;
-    }
-
-    rrweb.record({
-      emit(event) {
-        sessionEvents.push(event);
-      },
-      sampling: {
-        scroll: 150,
-        input: 'last'
-      },
-      recordCanvas: false,
-      collectFonts: false
-    });
-
-    // Send events every 10 seconds
-    recordingInterval = setInterval(() => {
-      if (sessionEvents.length > 0) {
-        sendSessionData();
+    // Wait for rrweb to load (check every 100ms, max 5 seconds)
+    let attempts = 0;
+    const maxAttempts = 50;
+    
+    const checkRRWeb = setInterval(() => {
+      attempts++;
+      
+      if (typeof rrweb !== 'undefined' && rrweb.record) {
+        clearInterval(checkRRWeb);
+        startRecording();
+      } else if (attempts >= maxAttempts) {
+        clearInterval(checkRRWeb);
+        console.warn('[LeadTracker] rrweb not loaded after 5s. Session recording disabled.');
+        console.warn('[LeadTracker] Make sure rrweb script loads before leadtracker-advanced.js');
       }
-    }, 10000);
+    }, 100);
+  }
 
-    // Send on page unload
-    window.addEventListener('beforeunload', () => {
-      sendSessionData(true);
-    });
+  function startRecording() {
+    try {
+      rrweb.record({
+        emit(event) {
+          sessionEvents.push(event);
+        },
+        sampling: {
+          scroll: 150,
+          input: 'last'
+        },
+        recordCanvas: false,
+        collectFonts: false
+      });
 
-    console.log('[LeadTracker] Session recording started');
+      // Send events every 10 seconds
+      recordingInterval = setInterval(() => {
+        if (sessionEvents.length > 0) {
+          sendSessionData();
+        }
+      }, 10000);
+
+      // Send on page unload
+      window.addEventListener('beforeunload', () => {
+        sendSessionData(true);
+      });
+
+      console.log('[LeadTracker] ✓ Session recording started');
+    } catch (error) {
+      console.error('[LeadTracker] Failed to start recording:', error);
+    }
   }
 
   function sendSessionData(completed = false) {

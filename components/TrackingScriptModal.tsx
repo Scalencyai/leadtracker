@@ -16,8 +16,8 @@ export default function TrackingScriptModal({ onClose }: TrackingScriptModalProp
   const basicScriptCode = `<script src="${baseUrl}/track.js" async></script>`;
   
   const advancedScriptCode = `<!-- LeadTracker Advanced Analytics -->
-<script src="https://cdn.jsdelivr.net/npm/rrweb@latest/dist/rrweb.min.js" async></script>
-<script src="${baseUrl}/leadtracker-advanced.js" async></script>`;
+<script src="https://cdn.jsdelivr.net/npm/rrweb@latest/dist/rrweb.min.js"></script>
+<script src="${baseUrl}/leadtracker-advanced.js" defer></script>`;
 
   const scriptCode = scriptType === 'basic' ? basicScriptCode : advancedScriptCode;
 
