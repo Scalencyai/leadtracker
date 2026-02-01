@@ -22,13 +22,13 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Insert event
+    // Insert event (session_id column doesn't exist in DB schema)
     await sql`
       INSERT INTO funnel_events (
-        visitor_id, session_id, event_type, 
+        visitor_id, event_type, 
         event_name, page_url, metadata
       ) VALUES (
-        ${visitor_id}, ${session_id || null}, ${event_type},
+        ${visitor_id}, ${event_type},
         ${event_name}, ${page_url || null}, ${JSON.stringify(metadata || {})}
       )
     `;
