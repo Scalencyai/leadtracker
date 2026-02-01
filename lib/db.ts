@@ -107,6 +107,32 @@ export async function initDb() {
       FOREIGN KEY (visitor_id) REFERENCES visitors(id) ON DELETE CASCADE
     )`;
 
+  // IP Overrides for manual company mapping
+  await sql`
+    CREATE TABLE IF NOT EXISTS ip_overrides (
+      id SERIAL PRIMARY KEY,
+      ip_start INET NOT NULL,
+      ip_end INET NOT NULL,
+      company_name TEXT NOT NULL,
+      domain TEXT,
+      industry TEXT,
+      source TEXT DEFAULT 'manual',
+      confidence DECIMAL(3,2) DEFAULT 1.00,
+      created_at TIMESTAMPTZ DEFAULT NOW(),
+      updated_at TIMESTAMPTZ DEFAULT NOW()
+    )`;
+
+  // ASN Database for better company detection
+  await sql`
+    CREATE TABLE IF NOT EXISTS asn_database (
+      asn INTEGER PRIMARY KEY,
+      name TEXT NOT NULL,
+      company_name TEXT,
+      country TEXT,
+      ip_ranges JSONB,
+      last_updated TIMESTAMPTZ DEFAULT NOW()
+    )`;
+
   // Create indexes
   await sql`CREATE INDEX IF NOT EXISTS idx_visitors_last_seen ON visitors(last_seen DESC)`;
   await sql`CREATE INDEX IF NOT EXISTS idx_visitors_ip ON visitors(ip_address)`;
@@ -125,6 +151,9 @@ export async function initDb() {
   await sql`CREATE INDEX IF NOT EXISTS idx_funnel_events_funnel ON funnel_events(funnel_id)`;
   await sql`CREATE INDEX IF NOT EXISTS idx_funnel_events_visitor ON funnel_events(visitor_id)`;
   await sql`CREATE INDEX IF NOT EXISTS idx_funnel_events_completed ON funnel_events(completed_at DESC)`;
+  await sql`CREATE INDEX IF NOT EXISTS idx_ip_overrides_start ON ip_overrides(ip_start)`;
+  await sql`CREATE INDEX IF NOT EXISTS idx_ip_overrides_end ON ip_overrides(ip_end)`;
+  await sql`CREATE INDEX IF NOT EXISTS idx_asn_company ON asn_database(company_name)`;
 }
 
 export interface Visitor {
@@ -325,6 +354,27 @@ export function needsLookup(visitor: Visitor): boolean {
   const cacheAge = Date.now() - visitor.lookup_cached_at;
   const oneDayMs = 24 * 60 * 60 * 1000;
   return cacheAge > oneDayMs;
+}
+
+// Check IP override table for manual company mappings
+export async function checkIPOverride(ipAddress: string): Promise<string | null> {
+  try {
+    const result = await sql`
+      SELECT company_name 
+      FROM ip_overrides 
+      WHERE inet '${ipAddress}' BETWEEN ip_start AND ip_end
+      ORDER BY confidence DESC
+      LIMIT 1
+    `;
+    
+    if (result.rows.length > 0) {
+      return result.rows[0].company_name;
+    }
+    return null;
+  } catch (error) {
+    console.error('IP override check failed:', error);
+    return null;
+  }
 }
 
 // Export sql for health checks

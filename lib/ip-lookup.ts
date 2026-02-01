@@ -1,3 +1,6 @@
+import { whoisLookup } from './whois-lookup';
+import { checkIPOverride } from './db';
+
 // Bot detection patterns
 const BOT_PATTERNS = [
   /googlebot/i,
@@ -127,13 +130,27 @@ async function reverseDNSLookup(ipAddress: string): Promise<string | null> {
   return null;
 }
 
-// Perform IP lookup using ipapi.co (free tier: 1000/day) + Reverse DNS
+// Perform IP lookup using ipapi.co (free tier: 1000/day) + Reverse DNS + WHOIS
 export async function lookupIP(ipAddress: string, userAgent: string | null): Promise<IPLookupResult> {
   // Check if it's a bot first
   const botDetected = isBot(userAgent);
 
   try {
-    // Try reverse DNS first for better company detection
+    // 1. Check manual IP overrides first (highest priority!)
+    const companyFromOverride = await checkIPOverride(ipAddress);
+    if (companyFromOverride) {
+      console.log(`[IP Lookup] ✓ Manual Override: ${companyFromOverride}`);
+      return {
+        company_name: companyFromOverride,
+        country: null, // Will be filled by ipapi.co below
+        city: null,
+        isp: null,
+        is_bot: botDetected,
+        is_isp: false,
+      };
+    }
+    
+    // 2. Try reverse DNS for better company detection
     const hostname = await reverseDNSLookup(ipAddress);
     let companyFromHostname = hostname ? extractCompanyFromHostname(hostname) : null;
     
@@ -175,10 +192,19 @@ export async function lookupIP(ipAddress: string, userAgent: string | null): Pro
       companyFromOrg = ispName.replace(/^AS\d+\s+/i, '').trim();
     }
 
-    // Prefer hostname-based company name over org name
-    const companyName = companyFromHostname || companyFromOrg;
+    // If still no good company name, try WHOIS lookup
+    let companyFromWhois = null;
+    if (!companyFromHostname && !companyFromOrg) {
+      console.log(`[IP Lookup] No company from DNS/ipapi, trying WHOIS...`);
+      const whoisData = await whoisLookup(ipAddress);
+      companyFromWhois = whoisData.company_name;
+      console.log(`[IP Lookup] WHOIS Company: ${companyFromWhois}`);
+    }
 
-    console.log(`[IP Lookup] Final Company: ${companyName} (from hostname: ${companyFromHostname}, from org: ${companyFromOrg})`);
+    // Prefer hostname > WHOIS > org name
+    const companyName = companyFromHostname || companyFromWhois || companyFromOrg;
+
+    console.log(`[IP Lookup] Final Company: ${companyName} (hostname: ${companyFromHostname}, whois: ${companyFromWhois}, org: ${companyFromOrg})`);
 
     return {
       company_name: companyName,
