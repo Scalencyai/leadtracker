@@ -28,8 +28,8 @@ export default function Dashboard() {
   useEffect(() => {
     fetchVisitors();
     
-    // Refresh every 5 seconds
-    const interval = setInterval(fetchVisitors, 5000);
+    // Refresh every 2 seconds for near-realtime updates
+    const interval = setInterval(fetchVisitors, 2000);
     return () => clearInterval(interval);
   }, []);
 
@@ -43,7 +43,8 @@ export default function Dashboard() {
       setLoading(true);
       setError(null);
       
-      const res = await fetch('/api/visitors');
+      // Cache busting - ensure fresh data on every request
+      const res = await fetch(`/api/visitors?t=${Date.now()}`);
       
       if (!res.ok) {
         throw new Error(`API returned ${res.status}: ${res.statusText}`);

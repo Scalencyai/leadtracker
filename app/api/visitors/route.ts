@@ -12,9 +12,16 @@ export async function GET() {
     // Get unique countries from DB
     const countries = await getCountries();
 
+    // Anti-caching headers for realtime updates
     return NextResponse.json({ 
       visitors,
       countries
+    }, {
+      headers: {
+        'Cache-Control': 'no-store, no-cache, must-revalidate, max-age=0',
+        'Pragma': 'no-cache',
+        'Expires': '0'
+      }
     });
   } catch (error: any) {
     console.error('Visitors API error:', error);
