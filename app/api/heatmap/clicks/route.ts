@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { sql } from '@vercel/postgres';
+import { corsResponse, handleOptions } from '@/lib/cors';
 
 // GET: Get click events for a page
 export async function GET(req: NextRequest) {
@@ -9,7 +10,7 @@ export async function GET(req: NextRequest) {
     const days = parseInt(searchParams.get('days') || '7');
 
     if (!page_url) {
-      return NextResponse.json(
+      return corsResponse(
         { error: 'page_url is required' },
         { status: 400 }
       );
@@ -28,13 +29,13 @@ export async function GET(req: NextRequest) {
       ORDER BY created_at DESC
     `;
 
-    return NextResponse.json({
+    return corsResponse({
       clicks: result.rows,
       count: result.rows.length
     });
   } catch (error: any) {
     console.error('Click events fetch error:', error);
-    return NextResponse.json(
+    return corsResponse(
       { error: error.message },
       { status: 500 }
     );
@@ -58,7 +59,7 @@ export async function POST(req: NextRequest) {
     } = body;
 
     if (!visitor_id || !page_url || x === undefined || y === undefined) {
-      return NextResponse.json(
+      return corsResponse(
         { error: 'visitor_id, page_url, x, and y are required' },
         { status: 400 }
       );
@@ -75,12 +76,17 @@ export async function POST(req: NextRequest) {
       )
     `;
 
-    return NextResponse.json({ success: true });
+    return corsResponse({ success: true });
   } catch (error: any) {
     console.error('Click event track error:', error);
-    return NextResponse.json(
+    return corsResponse(
       { error: error.message },
       { status: 500 }
     );
   }
+}
+
+// OPTIONS: Handle preflight requests
+export async function OPTIONS() {
+  return handleOptions();
 }

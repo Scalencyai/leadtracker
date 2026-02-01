@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { getOrCreateVisitor, addPageView, needsLookup, updateVisitorLookup } from '@/lib/db';
 import { lookupIP } from '@/lib/ip-lookup';
 import { getCompanyFromReferrer } from '@/lib/domain-to-company';
+import { corsResponse, handleOptions } from '@/lib/cors';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
@@ -47,16 +48,14 @@ export async function POST(request: NextRequest) {
     const { visitor_id, url, referrer, userAgent, timestamp } = body;
 
     if (!visitor_id || !url || !timestamp) {
-      return NextResponse.json({ error: 'Missing required fields' }, { 
-        status: 400,
-        headers: { 'Access-Control-Allow-Origin': '*' }
+      return corsResponse({ error: 'Missing required fields' }, { 
+        status: 400
       });
     }
 
     if (!checkRateLimit(visitor_id)) {
-      return NextResponse.json({ error: 'Rate limit exceeded' }, { 
-        status: 429,
-        headers: { 'Access-Control-Allow-Origin': '*' }
+      return corsResponse({ error: 'Rate limit exceeded' }, { 
+        status: 429
       });
     }
 
@@ -119,31 +118,21 @@ export async function POST(request: NextRequest) {
       console.log(`[IP Lookup] Skipping private IP: ${ipAddress}`);
     }
 
-    return NextResponse.json({ 
+    return corsResponse({ 
       success: true,
       visitor_id: visitor.id 
-    }, {
-      headers: { 'Access-Control-Allow-Origin': '*' }
     });
   } catch (error: any) {
     console.error('Track API error:', error);
-    return NextResponse.json({ 
+    return corsResponse({ 
       error: 'Internal server error',
       details: error.message 
     }, { 
-      status: 500,
-      headers: { 'Access-Control-Allow-Origin': '*' }
+      status: 500
     });
   }
 }
 
 export async function OPTIONS() {
-  return new NextResponse(null, {
-    status: 200,
-    headers: {
-      'Access-Control-Allow-Origin': '*',
-      'Access-Control-Allow-Methods': 'POST, OPTIONS',
-      'Access-Control-Allow-Headers': 'Content-Type',
-    },
-  });
+  return handleOptions();
 }

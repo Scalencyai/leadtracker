@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { sql } from '@vercel/postgres';
+import { corsResponse, handleOptions } from '@/lib/cors';
 
 // POST: Track funnel event
 export async function POST(req: NextRequest) {
@@ -15,7 +16,7 @@ export async function POST(req: NextRequest) {
     } = body;
 
     if (!visitor_id || !event_type || !event_name) {
-      return NextResponse.json(
+      return corsResponse(
         { error: 'visitor_id, event_type, and event_name are required' },
         { status: 400 }
       );
@@ -48,14 +49,19 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    return NextResponse.json({ success: true });
+    return corsResponse({ success: true });
   } catch (error: any) {
     console.error('Funnel event error:', error);
-    return NextResponse.json(
+    return corsResponse(
       { error: error.message },
       { status: 500 }
     );
   }
+}
+
+// OPTIONS: Handle preflight requests
+export async function OPTIONS() {
+  return handleOptions();
 }
 
 async function updateFunnelConversion(

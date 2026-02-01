@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { sql } from '@vercel/postgres';
+import { corsResponse, handleOptions } from '@/lib/cors';
 
 // GET: List all session recordings
 export async function GET(req: NextRequest) {
@@ -44,13 +45,13 @@ export async function GET(req: NextRequest) {
 
     const result = await sql.query(query, params);
 
-    return NextResponse.json({
+    return corsResponse({
       sessions: result.rows,
       count: result.rows.length
     });
   } catch (error: any) {
     console.error('Session list error:', error);
-    return NextResponse.json(
+    return corsResponse(
       { error: error.message },
       { status: 500 }
     );
@@ -64,7 +65,7 @@ export async function POST(req: NextRequest) {
     const { session_id, visitor_id, page_url, events, duration, page_count, completed } = body;
 
     if (!session_id || !page_url) {
-      return NextResponse.json(
+      return corsResponse(
         { error: 'session_id and page_url are required' },
         { status: 400 }
       );
@@ -101,12 +102,17 @@ export async function POST(req: NextRequest) {
       `;
     }
 
-    return NextResponse.json({ success: true });
+    return corsResponse({ success: true });
   } catch (error: any) {
     console.error('Session save error:', error);
-    return NextResponse.json(
+    return corsResponse(
       { error: error.message },
       { status: 500 }
     );
   }
+}
+
+// OPTIONS: Handle preflight requests
+export async function OPTIONS() {
+  return handleOptions();
 }

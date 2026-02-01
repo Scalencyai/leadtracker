@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { sql } from '@vercel/postgres';
+import { corsResponse, handleOptions } from '@/lib/cors';
 
 // GET: Get scroll events for a page
 export async function GET(req: NextRequest) {
@@ -9,7 +10,7 @@ export async function GET(req: NextRequest) {
     const days = parseInt(searchParams.get('days') || '7');
 
     if (!page_url) {
-      return NextResponse.json(
+      return corsResponse(
         { error: 'page_url is required' },
         { status: 400 }
       );
@@ -36,7 +37,7 @@ export async function GET(req: NextRequest) {
       depthBuckets[bucketIndex]++;
     });
 
-    return NextResponse.json({
+    return corsResponse({
       scrolls: result.rows,
       count: result.rows.length,
       depth_distribution: depthBuckets.map((count, index) => ({
@@ -46,7 +47,7 @@ export async function GET(req: NextRequest) {
     });
   } catch (error: any) {
     console.error('Scroll events fetch error:', error);
-    return NextResponse.json(
+    return corsResponse(
       { error: error.message },
       { status: 500 }
     );
@@ -68,7 +69,7 @@ export async function POST(req: NextRequest) {
     } = body;
 
     if (!visitor_id || !page_url || scroll_depth === undefined) {
-      return NextResponse.json(
+      return corsResponse(
         { error: 'visitor_id, page_url, and scroll_depth are required' },
         { status: 400 }
       );
@@ -85,12 +86,17 @@ export async function POST(req: NextRequest) {
       )
     `;
 
-    return NextResponse.json({ success: true });
+    return corsResponse({ success: true });
   } catch (error: any) {
     console.error('Scroll event track error:', error);
-    return NextResponse.json(
+    return corsResponse(
       { error: error.message },
       { status: 500 }
     );
   }
+}
+
+// OPTIONS: Handle preflight requests
+export async function OPTIONS() {
+  return handleOptions();
 }
