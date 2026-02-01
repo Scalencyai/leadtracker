@@ -1,45 +1,27 @@
 import { NextResponse } from 'next/server';
+import { getVisitorsWithStats, getCountries } from '@/lib/db';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
 
-// Import stores from track route
-// Note: This won't work across serverless functions, but good for demo
-// In production, use Vercel KV or Database
-
-// Simple global storage (shared within same process)
-const globalData = (global as any).leadtracker || ((global as any).leadtracker = {
-  visitors: new Map(),
-  pageViews: []
-});
-
 export async function GET() {
   try {
-    const visitors = Array.from(globalData.visitors.values());
-    const pageViews = globalData.pageViews;
-
-    // Calculate stats for each visitor
-    const visitorsWithStats = visitors.map((v: any) => {
-      const visitorPageViews = pageViews.filter((pv: any) => pv.visitor_id === v.id);
-      return {
-        ...v,
-        total_visits: visitorPageViews.length,
-        pages_viewed: [...new Set(visitorPageViews.map((pv: any) => pv.page_url))]
-      };
-    }).sort((a: any, b: any) => b.last_seen - a.last_seen);
-
-    // Get unique countries
-    const countries = [...new Set(visitors.map((v: any) => v.country).filter(Boolean))].sort();
+    // Get visitors with stats from DB
+    const visitors = await getVisitorsWithStats();
+    
+    // Get unique countries from DB
+    const countries = await getCountries();
 
     return NextResponse.json({ 
-      visitors: visitorsWithStats,
+      visitors,
       countries
     });
-  } catch (error) {
+  } catch (error: any) {
     console.error('Visitors API error:', error);
     return NextResponse.json({ 
+      error: error.message,
       visitors: [],
       countries: []
-    });
+    }, { status: 500 });
   }
 }

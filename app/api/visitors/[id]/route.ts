@@ -1,12 +1,41 @@
 import { NextResponse } from 'next/server';
+import { getVisitorDetails } from '@/lib/db';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
 
-// No-op - data is in localStorage on client-side
-export async function GET() {
-  return NextResponse.json({ 
-    visitor: null, 
-    pageViews: [] 
-  });
+export async function GET(
+  request: Request,
+  { params }: { params: { id: string } }
+) {
+  try {
+    const visitorId = parseInt(params.id);
+    
+    if (isNaN(visitorId)) {
+      return NextResponse.json(
+        { error: 'Invalid visitor ID' },
+        { status: 400 }
+      );
+    }
+
+    const details = await getVisitorDetails(visitorId);
+    
+    if (!details) {
+      return NextResponse.json(
+        { error: 'Visitor not found' },
+        { status: 404 }
+      );
+    }
+
+    return NextResponse.json({
+      visitor: details.visitor,
+      pageViews: details.pageViews
+    });
+  } catch (error: any) {
+    console.error('Visitor details API error:', error);
+    return NextResponse.json(
+      { error: error.message },
+      { status: 500 }
+    );
+  }
 }
