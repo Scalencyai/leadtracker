@@ -51,7 +51,7 @@ export async function POST(request: NextRequest) {
       RETURNING *
     `, [company, ip]);
     
-    if (result.rowCount > 0) {
+    if (result.rowCount && result.rowCount > 0) {
       console.log(`[Admin] ✅ Updated existing visitor record`);
     } else {
       console.log(`[Admin] ℹ️  No existing visitor (will apply on next visit)`);
@@ -60,7 +60,7 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ 
       success: true,
       message: `IP ${ip} mapped to ${company}`,
-      updated: result.rowCount > 0
+      updated: result.rowCount ? result.rowCount > 0 : false
     });
     
   } catch (error: any) {
