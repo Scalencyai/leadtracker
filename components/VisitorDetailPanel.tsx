@@ -12,6 +12,7 @@ export default function VisitorDetailPanel({ visitorId, onClose }: VisitorDetail
   const [visitor, setVisitor] = useState<Visitor | null>(null);
   const [pageViews, setPageViews] = useState<PageView[]>([]);
   const [loading, setLoading] = useState(true);
+  const [refreshingIP, setRefreshingIP] = useState(false);
 
   useEffect(() => {
     fetchDetails();
@@ -21,12 +22,53 @@ export default function VisitorDetailPanel({ visitorId, onClose }: VisitorDetail
     try {
       const res = await fetch(`/api/visitors/${visitorId}`);
       const data = await res.json();
+      
+      // Parse timestamps as numbers (BIGINT from DB comes as string)
+      if (data.visitor) {
+        data.visitor.first_seen = parseInt(data.visitor.first_seen);
+        data.visitor.last_seen = parseInt(data.visitor.last_seen);
+        if (data.visitor.lookup_cached_at) {
+          data.visitor.lookup_cached_at = parseInt(data.visitor.lookup_cached_at);
+        }
+      }
+      
+      if (data.pageViews) {
+        data.pageViews = data.pageViews.map((pv: any) => ({
+          ...pv,
+          viewed_at: parseInt(pv.viewed_at)
+        }));
+      }
+      
       setVisitor(data.visitor);
       setPageViews(data.pageViews);
     } catch (error) {
       console.error('Failed to fetch visitor details:', error);
     } finally {
       setLoading(false);
+    }
+  }
+
+  async function refreshIPLookup() {
+    if (!visitor) return;
+    
+    setRefreshingIP(true);
+    try {
+      const res = await fetch(`/api/visitors/${visitorId}/refresh-ip`, {
+        method: 'POST'
+      });
+      
+      if (res.ok) {
+        // Reload details
+        await fetchDetails();
+      } else {
+        const data = await res.json();
+        alert(`IP Lookup failed: ${data.error}`);
+      }
+    } catch (error) {
+      console.error('Failed to refresh IP lookup:', error);
+      alert('Failed to refresh IP lookup');
+    } finally {
+      setRefreshingIP(false);
     }
   }
 
@@ -215,9 +257,20 @@ export default function VisitorDetailPanel({ visitorId, onClose }: VisitorDetail
 
           {/* Visit Details */}
           <div>
-            <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-3">
-              📍 Visit Details
-            </h3>
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-sm font-semibold text-gray-900 dark:text-white">
+                📍 Visit Details
+              </h3>
+              {location === 'Unknown' && (
+                <button
+                  onClick={refreshIPLookup}
+                  disabled={refreshingIP}
+                  className="text-xs px-3 py-1.5 bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 rounded-lg hover:bg-blue-200 dark:hover:bg-blue-800 transition-colors disabled:opacity-50 font-medium"
+                >
+                  {refreshingIP ? '🔄 Loading...' : '🔍 Lookup Location'}
+                </button>
+              )}
+            </div>
             <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
               <DetailRow label="IP Address" value={visitor.ip_address} mono />
               <DetailRow label="Location" value={location} />
