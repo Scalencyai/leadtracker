@@ -16,6 +16,7 @@ export default function TrackingScriptModal({ onClose }: TrackingScriptModalProp
   const basicScriptCode = `<script src="${baseUrl}/track.js" async></script>`;
   
   const advancedScriptCode = `<!-- LeadTracker Advanced Analytics -->
+<script src="${baseUrl}/track.js" async></script>
 <script src="${baseUrl}/rrweb.min.js"></script>
 <script src="${baseUrl}/leadtracker-advanced.js" defer></script>`;
 
@@ -72,12 +73,13 @@ export default function TrackingScriptModal({ onClose }: TrackingScriptModalProp
           {scriptType === 'advanced' && (
             <div className="bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-900 rounded-lg p-4 mb-4">
               <h4 className="text-sm font-semibold text-blue-900 dark:text-blue-100 mb-2">
-                ✨ Advanced Features Included
+                ✨ Complete Analytics Suite (3 Scripts)
               </h4>
               <ul className="text-sm text-blue-800 dark:text-blue-200 space-y-1">
-                <li>• 🎬 Session Recording & Replay</li>
+                <li>• 👥 Visitor Tracking & IP Intelligence (track.js)</li>
+                <li>• 🎬 Session Recording & Replay (rrweb.min.js)</li>
+                <li>• 🔥 Click & Scroll Heatmaps (leadtracker-advanced.js)</li>
                 <li>• 📊 Funnel Tracking & Analytics</li>
-                <li>• 🔥 Click & Scroll Heatmaps</li>
                 <li>• 📈 Enhanced Event Tracking</li>
               </ul>
             </div>
