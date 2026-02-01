@@ -392,14 +392,14 @@ function DetailRow({ label, value, mono, badge }: DetailRowProps) {
   };
 
   return (
-    <div className="flex justify-between items-start py-2 sm:py-2.5 border-b border-gray-100 dark:border-gray-700 last:border-0 gap-3 sm:gap-4">
-      <div className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 flex-shrink-0">{label}</div>
+    <div className="flex flex-col sm:flex-row sm:justify-between sm:items-start py-2 sm:py-2.5 border-b border-gray-100 dark:border-gray-700 last:border-0 gap-1 sm:gap-4">
+      <div className="text-xs sm:text-sm text-gray-500 dark:text-gray-400">{label}</div>
       {badge ? (
-        <span className={`text-xs font-medium px-2 py-1 rounded flex-shrink-0 ${badgeClasses[badge]}`}>
+        <span className={`text-xs font-medium px-2 py-1 rounded self-start ${badgeClasses[badge]}`}>
           {value}
         </span>
       ) : (
-        <div className={`text-xs sm:text-sm text-gray-900 dark:text-white ${mono ? 'font-mono text-[10px] sm:text-xs' : ''} text-right break-words min-w-0 flex-1`}>
+        <div className={`text-xs sm:text-sm text-gray-900 dark:text-white ${mono ? 'font-mono text-[10px] sm:text-xs' : ''} sm:text-right break-words overflow-wrap-anywhere`}>
           {value}
         </div>
       )}

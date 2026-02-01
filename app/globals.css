@@ -63,4 +63,10 @@
   * {
     -webkit-tap-highlight-color: transparent;
   }
+
+  /* Word breaking for long values */
+  .overflow-wrap-anywhere {
+    overflow-wrap: anywhere;
+    word-break: break-word;
+  }
 }
