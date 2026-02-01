@@ -13,6 +13,7 @@ export default function DashboardNav() {
     { href: '/dashboard/sessions', label: 'Sessions', icon: '▶️' },
     { href: '/dashboard/funnels', label: 'Funnels', icon: '📊' },
     { href: '/dashboard/heatmaps', label: 'Heatmaps', icon: '🔥' },
+    { href: '/dashboard/settings', label: 'Settings', icon: '⚙️' },
   ];
 
   return (

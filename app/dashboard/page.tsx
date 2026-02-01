@@ -4,8 +4,6 @@ import { useState, useEffect } from 'react';
 import VisitorTable from '@/components/VisitorTable';
 import StatsCards from '@/components/StatsCards';
 import Filters from '@/components/Filters';
-import TrackingScriptModal from '@/components/TrackingScriptModal';
-import InstallationChecker from '@/components/InstallationChecker';
 import DashboardNav from '@/components/DashboardNav';
 import type { VisitorWithStats } from '@/lib/types';
 
@@ -13,7 +11,6 @@ export default function Dashboard() {
   const [visitors, setVisitors] = useState<VisitorWithStats[]>([]);
   const [filteredVisitors, setFilteredVisitors] = useState<VisitorWithStats[]>([]);
   const [countries, setCountries] = useState<string[]>([]);
-  const [showScriptModal, setShowScriptModal] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
   
@@ -124,21 +121,6 @@ export default function Dashboard() {
     setFilteredVisitors(filtered);
   }
 
-  function handleExport() {
-    const jsonData = JSON.stringify({
-      visitors,
-      exportedAt: new Date().toISOString()
-    }, null, 2);
-    
-    const blob = new Blob([jsonData], { type: 'application/json' });
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement('a');
-    a.href = url;
-    a.download = `leadtracker_${new Date().toISOString().split('T')[0]}.json`;
-    a.click();
-    URL.revokeObjectURL(url);
-  }
-
   // Loading UI
   if (loading && visitors.length === 0) {
     return (
@@ -182,43 +164,9 @@ export default function Dashboard() {
       <DashboardNav />
       
       {/* Header */}
-      <header className="bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
-            <div>
-              <h1 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white">
-                LeadTracker
-              </h1>
-              <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 mt-1">
-                Free B2B Website Visitor Identification (Cookie-based)
-              </p>
-            </div>
-            <div className="flex items-center gap-2 sm:gap-3">
-              <button
-                onClick={handleExport}
-                className="flex-1 sm:flex-none px-3 sm:px-4 py-2 text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300 bg-white dark:bg-gray-800 border border-gray-300 dark:border-gray-700 rounded-lg hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
-              >
-                📥 Export
-              </button>
-              <button
-                onClick={() => setShowScriptModal(true)}
-                className="flex-1 sm:flex-none px-3 sm:px-4 py-2 text-xs sm:text-sm font-medium text-white bg-blue-600 rounded-lg hover:bg-blue-700 transition-colors whitespace-nowrap"
-              >
-                🔧 Get Script
-              </button>
-            </div>
-          </div>
-        </div>
-      </header>
-
       {/* Main Content */}
       <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
         <StatsCards visitors={filteredVisitors} />
-
-        {/* Installation Checker */}
-        <div className="mt-8">
-          <InstallationChecker />
-        </div>
 
         <div className="mt-8">
           <Filters
@@ -240,11 +188,6 @@ export default function Dashboard() {
           />
         </div>
       </main>
-
-      {/* Modals */}
-      {showScriptModal && (
-        <TrackingScriptModal onClose={() => setShowScriptModal(false)} />
-      )}
     </div>
   );
 }
