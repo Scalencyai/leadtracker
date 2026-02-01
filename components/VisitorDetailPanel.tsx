@@ -178,7 +178,7 @@ export default function VisitorDetailPanel({ visitorId, onClose }: VisitorDetail
       />
 
       {/* Panel */}
-      <div className="fixed inset-y-0 right-0 w-full sm:w-[90%] md:w-1/2 lg:w-1/3 bg-white dark:bg-gray-900 border-l border-gray-200 dark:border-gray-800 shadow-xl z-40 overflow-y-auto">
+      <div className="fixed inset-0 sm:inset-y-0 sm:right-0 sm:left-auto w-screen sm:w-[90%] md:w-1/2 lg:w-1/3 max-w-full bg-white dark:bg-gray-900 border-l border-gray-200 dark:border-gray-800 shadow-xl z-40 overflow-y-auto overflow-x-hidden">
         {/* Header */}
         <div className="sticky top-0 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800 p-4 sm:p-6 z-10">
           <div className="flex items-start justify-between gap-3">
@@ -211,9 +211,9 @@ export default function VisitorDetailPanel({ visitorId, onClose }: VisitorDetail
         </div>
 
         {/* Content */}
-        <div className="p-4 sm:p-6 space-y-4 sm:space-y-6">
+        <div className="p-4 sm:p-6 space-y-4 sm:space-y-6 max-w-full overflow-hidden">
           {/* Summary Stats */}
-          <div className="grid grid-cols-2 gap-2 sm:gap-3">
+          <div className="grid grid-cols-2 gap-2 sm:gap-3 w-full max-w-full">
             <StatCard label="Page Views" value={pageViews.length.toString()} />
             <StatCard label="Unique Pages" value={uniquePages.toString()} />
             <StatCard label="Session Time" value={formatDuration(sessionDuration)} />
@@ -221,7 +221,7 @@ export default function VisitorDetailPanel({ visitorId, onClose }: VisitorDetail
           </div>
 
           {/* Engagement Metrics */}
-          <div className="bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 rounded-lg p-3 sm:p-4 border border-blue-200 dark:border-blue-800">
+          <div className="bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 rounded-lg p-3 sm:p-4 border border-blue-200 dark:border-blue-800 w-full max-w-full">
             <div className="flex items-center justify-between mb-2 sm:mb-3 gap-2">
               <h3 className="text-xs sm:text-sm font-semibold text-gray-900 dark:text-white truncate">
                 📊 Engagement Score
@@ -245,11 +245,11 @@ export default function VisitorDetailPanel({ visitorId, onClose }: VisitorDetail
           </div>
 
           {/* Technology Stack */}
-          <div>
+          <div className="w-full max-w-full">
             <h3 className="text-xs sm:text-sm font-semibold text-gray-900 dark:text-white mb-2 sm:mb-3">
               💻 Technology
             </h3>
-            <div className="grid grid-cols-3 gap-2 sm:gap-3">
+            <div className="grid grid-cols-3 gap-2 sm:gap-3 w-full max-w-full">
               <TechCard icon="🌐" label="Browser" value={deviceInfo.browser} />
               <TechCard icon="💾" label="OS" value={deviceInfo.os} />
               <TechCard icon="📱" label="Device" value={deviceInfo.device} />
@@ -257,7 +257,7 @@ export default function VisitorDetailPanel({ visitorId, onClose }: VisitorDetail
           </div>
 
           {/* Visit Details */}
-          <div>
+          <div className="w-full max-w-full">
             <div className="flex items-center justify-between mb-2 sm:mb-3 gap-2">
               <h3 className="text-xs sm:text-sm font-semibold text-gray-900 dark:text-white">
                 📍 Visit Details
@@ -272,7 +272,7 @@ export default function VisitorDetailPanel({ visitorId, onClose }: VisitorDetail
                 </button>
               )}
             </div>
-            <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden px-3 sm:px-4">
+            <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden px-3 sm:px-4 w-full max-w-full">
               <DetailRow label="IP Address" value={visitor.ip_address} mono />
               <DetailRow label="Location" value={location} />
               <DetailRow label="ISP" value={visitor.isp || 'Unknown'} />
@@ -309,11 +309,11 @@ export default function VisitorDetailPanel({ visitorId, onClose }: VisitorDetail
           )}
 
           {/* Session Timeline */}
-          <div>
+          <div className="w-full max-w-full">
             <h3 className="text-xs sm:text-sm font-semibold text-gray-900 dark:text-white mb-2 sm:mb-3">
               🕐 Session Timeline ({pageViews.length} pages)
             </h3>
-            <div className="relative">
+            <div className="relative w-full max-w-full">
               {/* Timeline line */}
               <div className="absolute left-3 sm:left-4 top-0 bottom-0 w-0.5 bg-gray-200 dark:bg-gray-700" />
               
@@ -409,8 +409,8 @@ function DetailRow({ label, value, mono, badge }: DetailRowProps) {
 
 function StatCard({ label, value }: { label: string; value: string }) {
   return (
-    <div className="bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-800 dark:to-gray-900 rounded-lg p-2.5 sm:p-3 border border-gray-200 dark:border-gray-700">
-      <div className="text-[10px] sm:text-xs text-gray-500 dark:text-gray-400 mb-0.5 sm:mb-1">{label}</div>
+    <div className="bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-800 dark:to-gray-900 rounded-lg p-2.5 sm:p-3 border border-gray-200 dark:border-gray-700 min-w-0">
+      <div className="text-[10px] sm:text-xs text-gray-500 dark:text-gray-400 mb-0.5 sm:mb-1 truncate">{label}</div>
       <div className="text-base sm:text-lg font-bold text-gray-900 dark:text-white truncate">{value}</div>
     </div>
   );
@@ -418,9 +418,9 @@ function StatCard({ label, value }: { label: string; value: string }) {
 
 function TechCard({ icon, label, value }: { icon: string; label: string; value: string }) {
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-lg p-2 sm:p-3 border border-gray-200 dark:border-gray-700 text-center">
+    <div className="bg-white dark:bg-gray-800 rounded-lg p-2 sm:p-3 border border-gray-200 dark:border-gray-700 text-center min-w-0">
       <div className="text-xl sm:text-2xl mb-0.5 sm:mb-1">{icon}</div>
-      <div className="text-[10px] sm:text-xs text-gray-500 dark:text-gray-400 mb-0.5 sm:mb-1">{label}</div>
+      <div className="text-[10px] sm:text-xs text-gray-500 dark:text-gray-400 mb-0.5 sm:mb-1 truncate">{label}</div>
       <div className="text-[10px] sm:text-xs font-semibold text-gray-900 dark:text-white truncate">{value}</div>
     </div>
   );
