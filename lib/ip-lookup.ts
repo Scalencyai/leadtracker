@@ -87,12 +87,58 @@ export interface IPLookupResult {
   is_isp: boolean;
 }
 
-// Perform IP lookup using ipapi.co (free tier: 1000/day)
+// Extract company name from hostname
+function extractCompanyFromHostname(hostname: string): string | null {
+  if (!hostname || hostname.includes('static') || hostname.includes('dynamic')) {
+    return null;
+  }
+  
+  // Remove common suffixes
+  const parts = hostname.toLowerCase()
+    .replace(/\.(com|ch|de|net|org|io|ai|co|uk|fr|eu)$/i, '')
+    .split('.');
+  
+  // Get the main domain part
+  const domain = parts[parts.length - 1];
+  
+  if (!domain || domain.length < 3) return null;
+  
+  // Capitalize first letter of each word
+  return domain
+    .split(/[-_]/)
+    .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+    .join(' ');
+}
+
+// Perform reverse DNS lookup
+async function reverseDNSLookup(ipAddress: string): Promise<string | null> {
+  try {
+    // Use a DNS-over-HTTPS service for reverse lookup
+    const response = await fetch(`https://dns.google/resolve?name=${ipAddress}&type=PTR`);
+    const data = await response.json();
+    
+    if (data.Answer && data.Answer.length > 0) {
+      const hostname = data.Answer[0].data;
+      return hostname.replace(/\.$/, ''); // Remove trailing dot
+    }
+  } catch (error) {
+    console.error('Reverse DNS failed:', error);
+  }
+  return null;
+}
+
+// Perform IP lookup using ipapi.co (free tier: 1000/day) + Reverse DNS
 export async function lookupIP(ipAddress: string, userAgent: string | null): Promise<IPLookupResult> {
   // Check if it's a bot first
   const botDetected = isBot(userAgent);
 
   try {
+    // Try reverse DNS first for better company detection
+    const hostname = await reverseDNSLookup(ipAddress);
+    let companyFromHostname = hostname ? extractCompanyFromHostname(hostname) : null;
+    
+    console.log(`[IP Lookup] IP: ${ipAddress}, Hostname: ${hostname}, Company from DNS: ${companyFromHostname}`);
+
     // Use ipapi.co free tier
     const response = await fetch(`https://ipapi.co/${ipAddress}/json/`, {
       headers: {
@@ -110,7 +156,7 @@ export async function lookupIP(ipAddress: string, userAgent: string | null): Pro
     if (data.error) {
       console.error('IP lookup error:', data.reason || data.error);
       return {
-        company_name: null,
+        company_name: companyFromHostname,
         country: null,
         city: null,
         isp: null,
@@ -123,12 +169,16 @@ export async function lookupIP(ipAddress: string, userAgent: string | null): Pro
     const ispDetected = isISP(ispName);
 
     // Try to extract company name from org field
-    // Often formatted like "AS12345 Company Name"
-    let companyName = null;
+    let companyFromOrg = null;
     if (ispName && !ispDetected) {
       // Remove AS number prefix
-      companyName = ispName.replace(/^AS\d+\s+/i, '').trim();
+      companyFromOrg = ispName.replace(/^AS\d+\s+/i, '').trim();
     }
+
+    // Prefer hostname-based company name over org name
+    const companyName = companyFromHostname || companyFromOrg;
+
+    console.log(`[IP Lookup] Final Company: ${companyName} (from hostname: ${companyFromHostname}, from org: ${companyFromOrg})`);
 
     return {
       company_name: companyName,
