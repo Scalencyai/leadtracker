@@ -222,21 +222,21 @@ export default function VisitorDetailPanel({ visitorId, onClose }: VisitorDetail
 
           {/* Engagement Metrics */}
           <div className="bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 rounded-lg p-3 sm:p-4 border border-blue-200 dark:border-blue-800">
-            <div className="flex items-center justify-between mb-2 sm:mb-3">
-              <h3 className="text-xs sm:text-sm font-semibold text-gray-900 dark:text-white">
+            <div className="flex items-center justify-between mb-2 sm:mb-3 gap-2">
+              <h3 className="text-xs sm:text-sm font-semibold text-gray-900 dark:text-white truncate">
                 📊 Engagement Score
               </h3>
-              <span className="text-xl sm:text-2xl font-bold text-blue-600 dark:text-blue-400">
+              <span className="text-xl sm:text-2xl font-bold text-blue-600 dark:text-blue-400 flex-shrink-0">
                 {Math.min(100, Math.round((pageViews.length * 10) + (sessionDuration / 60000)))}%
               </span>
             </div>
-            <div className="grid grid-cols-2 gap-2 text-xs">
-              <div>
-                <span className="text-gray-500 dark:text-gray-400">Bounce Rate:</span>
+            <div className="grid grid-cols-2 gap-2 text-[10px] sm:text-xs">
+              <div className="truncate">
+                <span className="text-gray-500 dark:text-gray-400">Bounce:</span>
                 <span className="ml-1 font-medium text-gray-900 dark:text-white">{bounceRate}%</span>
               </div>
-              <div>
-                <span className="text-gray-500 dark:text-gray-400">Pages/Visit:</span>
+              <div className="truncate">
+                <span className="text-gray-500 dark:text-gray-400">Pages:</span>
                 <span className="ml-1 font-medium text-gray-900 dark:text-white">
                   {(pageViews.length / 1).toFixed(1)}
                 </span>
@@ -272,7 +272,7 @@ export default function VisitorDetailPanel({ visitorId, onClose }: VisitorDetail
                 </button>
               )}
             </div>
-            <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
+            <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden px-3 sm:px-4">
               <DetailRow label="IP Address" value={visitor.ip_address} mono />
               <DetailRow label="Location" value={location} />
               <DetailRow label="ISP" value={visitor.isp || 'Unknown'} />
@@ -392,14 +392,14 @@ function DetailRow({ label, value, mono, badge }: DetailRowProps) {
   };
 
   return (
-    <div className="flex justify-between items-start py-2 border-b border-gray-100 dark:border-gray-700 last:border-0">
-      <div className="text-sm text-gray-500 dark:text-gray-400">{label}</div>
+    <div className="flex justify-between items-start py-2 sm:py-2.5 border-b border-gray-100 dark:border-gray-700 last:border-0 gap-3 sm:gap-4">
+      <div className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 flex-shrink-0">{label}</div>
       {badge ? (
-        <span className={`text-xs font-medium px-2 py-1 rounded ${badgeClasses[badge]}`}>
+        <span className={`text-xs font-medium px-2 py-1 rounded flex-shrink-0 ${badgeClasses[badge]}`}>
           {value}
         </span>
       ) : (
-        <div className={`text-sm text-gray-900 dark:text-white ${mono ? 'font-mono text-xs' : ''} text-right max-w-[60%] truncate`}>
+        <div className={`text-xs sm:text-sm text-gray-900 dark:text-white ${mono ? 'font-mono text-[10px] sm:text-xs' : ''} text-right break-words min-w-0 flex-1`}>
           {value}
         </div>
       )}
