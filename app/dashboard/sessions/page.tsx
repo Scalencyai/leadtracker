@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from 'react';
 import Script from 'next/script';
+import DashboardNav from '@/components/DashboardNav';
 
 interface Session {
   id: number;
@@ -23,6 +24,7 @@ export default function SessionsPage() {
 
   useEffect(() => {
     loadSessions();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   async function loadSessions() {
@@ -51,31 +53,37 @@ export default function SessionsPage() {
   }
 
   function playSession(session: Session) {
-    if (!session.events || session.events.length === 0) {
-      alert('No events recorded for this session');
-      return;
-    }
+    try {
+      if (!session.events || session.events.length === 0) {
+        alert('No events recorded for this session');
+        return;
+      }
 
-    // Clear previous player
-    const container = document.getElementById('player-container');
-    if (container) {
-      container.innerHTML = '';
-    }
+      // Clear previous player
+      const container = document.getElementById('player-container');
+      if (container) {
+        container.innerHTML = '';
+      }
 
-    // Initialize rrweb player
-    if ((window as any).rrwebPlayer && container) {
-      new (window as any).rrwebPlayer({
-        target: container,
-        props: {
-          events: session.events,
-          width: 1024,
-          height: 576,
-          autoPlay: true,
-          speed: 2
-        }
-      });
-    } else {
-      console.error('rrweb-player not loaded');
+      // Initialize rrweb player
+      if ((window as any).rrwebPlayer && container) {
+        new (window as any).rrwebPlayer({
+          target: container,
+          props: {
+            events: session.events,
+            width: 1024,
+            height: 576,
+            autoPlay: true,
+            speed: 2
+          }
+        });
+      } else {
+        console.error('rrweb-player not loaded yet');
+        container && (container.innerHTML = '<div class="p-8 text-center text-gray-500">Loading player...</div>');
+      }
+    } catch (error) {
+      console.error('Failed to play session:', error);
+      alert('Failed to play session. Check console for details.');
     }
   }
 
@@ -99,15 +107,22 @@ export default function SessionsPage() {
       <Script 
         src="https://cdn.jsdelivr.net/npm/rrweb-player@latest/dist/index.js"
         strategy="lazyOnload"
-        onLoad={() => setRrwebPlayer((window as any).rrwebPlayer)}
+        onLoad={() => {
+          console.log('rrweb-player loaded');
+          setRrwebPlayer((window as any).rrwebPlayer);
+        }}
+        onError={(e) => {
+          console.error('rrweb-player failed to load:', e);
+        }}
       />
       <link 
         rel="stylesheet" 
         href="https://cdn.jsdelivr.net/npm/rrweb-player@latest/dist/style.css"
       />
 
-      <div className="min-h-screen bg-gray-50 dark:bg-gray-950 py-8">
-        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-950">
+        <DashboardNav />
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
           <div className="mb-8">
             <h1 className="text-3xl font-bold text-gray-900 dark:text-white">
               🎬 Session Recordings
