@@ -5,7 +5,7 @@ import { sql } from '@vercel/postgres';
 
 // Initialize database schema
 export async function initDb() {
-  // Main visitors and page views tables
+  // Visitors table
   await sql`
     CREATE TABLE IF NOT EXISTS visitors (
       id SERIAL PRIMARY KEY,
@@ -19,8 +19,10 @@ export async function initDb() {
       first_seen BIGINT NOT NULL,
       last_seen BIGINT NOT NULL,
       lookup_cached_at BIGINT
-    );
+    )`;
 
+  // Page views table
+  await sql`
     CREATE TABLE IF NOT EXISTS page_views (
       id SERIAL PRIMARY KEY,
       visitor_id INTEGER NOT NULL,
@@ -30,13 +32,7 @@ export async function initDb() {
       viewed_at BIGINT NOT NULL,
       duration INTEGER DEFAULT 0,
       FOREIGN KEY (visitor_id) REFERENCES visitors(id) ON DELETE CASCADE
-    );
-
-    CREATE INDEX IF NOT EXISTS idx_visitors_last_seen ON visitors(last_seen DESC);
-    CREATE INDEX IF NOT EXISTS idx_visitors_ip ON visitors(ip_address);
-    CREATE INDEX IF NOT EXISTS idx_page_views_visitor ON page_views(visitor_id);
-    CREATE INDEX IF NOT EXISTS idx_page_views_time ON page_views(viewed_at DESC);
-  `;
+    )`;
 
   // Session recordings table
   await sql`
@@ -52,12 +48,7 @@ export async function initDb() {
       created_at TIMESTAMPTZ DEFAULT NOW(),
       updated_at TIMESTAMPTZ DEFAULT NOW(),
       FOREIGN KEY (visitor_id) REFERENCES visitors(id) ON DELETE CASCADE
-    );
-
-    CREATE INDEX IF NOT EXISTS idx_sessions_visitor ON session_recordings(visitor_id);
-    CREATE INDEX IF NOT EXISTS idx_sessions_created ON session_recordings(created_at DESC);
-    CREATE INDEX IF NOT EXISTS idx_sessions_page_url ON session_recordings(page_url);
-  `;
+    )`;
 
   // Click events for heatmaps
   await sql`
@@ -74,12 +65,7 @@ export async function initDb() {
       element_text TEXT,
       created_at TIMESTAMPTZ DEFAULT NOW(),
       FOREIGN KEY (visitor_id) REFERENCES visitors(id) ON DELETE CASCADE
-    );
-
-    CREATE INDEX IF NOT EXISTS idx_clicks_page ON click_events(page_url);
-    CREATE INDEX IF NOT EXISTS idx_clicks_created ON click_events(created_at DESC);
-    CREATE INDEX IF NOT EXISTS idx_clicks_visitor ON click_events(visitor_id);
-  `;
+    )`;
 
   // Scroll events for heatmaps
   await sql`
@@ -94,12 +80,7 @@ export async function initDb() {
       page_height INTEGER,
       created_at TIMESTAMPTZ DEFAULT NOW(),
       FOREIGN KEY (visitor_id) REFERENCES visitors(id) ON DELETE CASCADE
-    );
-
-    CREATE INDEX IF NOT EXISTS idx_scrolls_page ON scroll_events(page_url);
-    CREATE INDEX IF NOT EXISTS idx_scrolls_created ON scroll_events(created_at DESC);
-    CREATE INDEX IF NOT EXISTS idx_scrolls_visitor ON scroll_events(visitor_id);
-  `;
+    )`;
 
   // Conversion funnels
   await sql`
@@ -110,10 +91,7 @@ export async function initDb() {
       steps JSONB NOT NULL,
       created_at TIMESTAMPTZ DEFAULT NOW(),
       updated_at TIMESTAMPTZ DEFAULT NOW()
-    );
-
-    CREATE INDEX IF NOT EXISTS idx_funnels_created ON funnels(created_at DESC);
-  `;
+    )`;
 
   // Funnel events (visitor progress through funnels)
   await sql`
@@ -127,12 +105,26 @@ export async function initDb() {
       completed_at TIMESTAMPTZ DEFAULT NOW(),
       FOREIGN KEY (funnel_id) REFERENCES funnels(id) ON DELETE CASCADE,
       FOREIGN KEY (visitor_id) REFERENCES visitors(id) ON DELETE CASCADE
-    );
+    )`;
 
-    CREATE INDEX IF NOT EXISTS idx_funnel_events_funnel ON funnel_events(funnel_id);
-    CREATE INDEX IF NOT EXISTS idx_funnel_events_visitor ON funnel_events(visitor_id);
-    CREATE INDEX IF NOT EXISTS idx_funnel_events_completed ON funnel_events(completed_at DESC);
-  `;
+  // Create indexes
+  await sql`CREATE INDEX IF NOT EXISTS idx_visitors_last_seen ON visitors(last_seen DESC)`;
+  await sql`CREATE INDEX IF NOT EXISTS idx_visitors_ip ON visitors(ip_address)`;
+  await sql`CREATE INDEX IF NOT EXISTS idx_page_views_visitor ON page_views(visitor_id)`;
+  await sql`CREATE INDEX IF NOT EXISTS idx_page_views_time ON page_views(viewed_at DESC)`;
+  await sql`CREATE INDEX IF NOT EXISTS idx_sessions_visitor ON session_recordings(visitor_id)`;
+  await sql`CREATE INDEX IF NOT EXISTS idx_sessions_created ON session_recordings(created_at DESC)`;
+  await sql`CREATE INDEX IF NOT EXISTS idx_sessions_page_url ON session_recordings(page_url)`;
+  await sql`CREATE INDEX IF NOT EXISTS idx_clicks_page ON click_events(page_url)`;
+  await sql`CREATE INDEX IF NOT EXISTS idx_clicks_created ON click_events(created_at DESC)`;
+  await sql`CREATE INDEX IF NOT EXISTS idx_clicks_visitor ON click_events(visitor_id)`;
+  await sql`CREATE INDEX IF NOT EXISTS idx_scrolls_page ON scroll_events(page_url)`;
+  await sql`CREATE INDEX IF NOT EXISTS idx_scrolls_created ON scroll_events(created_at DESC)`;
+  await sql`CREATE INDEX IF NOT EXISTS idx_scrolls_visitor ON scroll_events(visitor_id)`;
+  await sql`CREATE INDEX IF NOT EXISTS idx_funnels_created ON funnels(created_at DESC)`;
+  await sql`CREATE INDEX IF NOT EXISTS idx_funnel_events_funnel ON funnel_events(funnel_id)`;
+  await sql`CREATE INDEX IF NOT EXISTS idx_funnel_events_visitor ON funnel_events(visitor_id)`;
+  await sql`CREATE INDEX IF NOT EXISTS idx_funnel_events_completed ON funnel_events(completed_at DESC)`;
 }
 
 export interface Visitor {
