@@ -1,11 +1,15 @@
+'use client';
+
+import { useRouter } from 'next/navigation';
 import type { VisitorWithStats } from '@/lib/types';
 
 interface VisitorTableProps {
   visitors: VisitorWithStats[];
-  onSelectVisitor: (id: string | number) => void;
+  onSelectVisitor?: (id: string | number) => void;
 }
 
 export default function VisitorTable({ visitors, onSelectVisitor }: VisitorTableProps) {
+  const router = useRouter();
   if (visitors.length === 0) {
     return (
       <div className="bg-white dark:bg-gray-900 rounded-lg border border-gray-200 dark:border-gray-800 p-8 sm:p-12 text-center">
@@ -53,7 +57,7 @@ export default function VisitorTable({ visitors, onSelectVisitor }: VisitorTable
                 <VisitorRow
                   key={visitor.id}
                   visitor={visitor}
-                  onClick={() => onSelectVisitor(visitor.id)}
+                  onClick={() => router.push(`/dashboard/visitors/${visitor.id}`)}
                 />
               ))}
             </tbody>
@@ -67,7 +71,7 @@ export default function VisitorTable({ visitors, onSelectVisitor }: VisitorTable
           <VisitorCard
             key={visitor.id}
             visitor={visitor}
-            onClick={() => onSelectVisitor(visitor.id)}
+            onClick={() => router.push(`/dashboard/visitors/${visitor.id}`)}
           />
         ))}
       </div>

@@ -2,7 +2,6 @@
 
 import { useState, useEffect } from 'react';
 import VisitorTable from '@/components/VisitorTable';
-import VisitorDetailPanel from '@/components/VisitorDetailPanel';
 import StatsCards from '@/components/StatsCards';
 import Filters from '@/components/Filters';
 import TrackingScriptModal from '@/components/TrackingScriptModal';
@@ -14,7 +13,6 @@ export default function Dashboard() {
   const [visitors, setVisitors] = useState<VisitorWithStats[]>([]);
   const [filteredVisitors, setFilteredVisitors] = useState<VisitorWithStats[]>([]);
   const [countries, setCountries] = useState<string[]>([]);
-  const [selectedVisitor, setSelectedVisitor] = useState<string | number | null>(null);
   const [showScriptModal, setShowScriptModal] = useState(false);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -238,7 +236,6 @@ export default function Dashboard() {
 
           <VisitorTable
             visitors={filteredVisitors}
-            onSelectVisitor={setSelectedVisitor}
           />
         </div>
       </main>
@@ -246,14 +243,6 @@ export default function Dashboard() {
       {/* Modals */}
       {showScriptModal && (
         <TrackingScriptModal onClose={() => setShowScriptModal(false)} />
-      )}
-
-      {/* Visitor Detail Panel */}
-      {selectedVisitor && typeof selectedVisitor === 'number' && (
-        <VisitorDetailPanel
-          visitorId={selectedVisitor}
-          onClose={() => setSelectedVisitor(null)}
-        />
       )}
     </div>
   );
