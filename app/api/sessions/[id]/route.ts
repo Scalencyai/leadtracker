@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { sql } from '@vercel/postgres';
+import { corsResponse, handleOptions } from '@/lib/cors';
 
 export async function GET(
   req: NextRequest,
@@ -17,18 +18,22 @@ export async function GET(
     `;
 
     if (result.rows.length === 0) {
-      return NextResponse.json(
+      return corsResponse(
         { error: 'Session not found' },
         { status: 404 }
       );
     }
 
-    return NextResponse.json(result.rows[0]);
+    return corsResponse(result.rows[0]);
   } catch (error: any) {
     console.error('Session fetch error:', error);
-    return NextResponse.json(
+    return corsResponse(
       { error: error.message },
       { status: 500 }
     );
   }
+}
+
+export async function OPTIONS() {
+  return handleOptions();
 }

@@ -55,35 +55,57 @@ export default function SessionsPage() {
   function playSession(session: Session) {
     try {
       if (!session.events || session.events.length === 0) {
-        alert('No events recorded for this session');
+        console.warn('No events recorded for this session');
+        const container = document.getElementById('player-container');
+        if (container) {
+          container.innerHTML = '<div class="p-8 text-center text-yellow-600 dark:text-yellow-400 bg-yellow-50 dark:bg-yellow-900/20 rounded">⚠️ No events recorded for this session. Make sure rrweb is loading on your website.</div>';
+        }
         return;
       }
 
       // Clear previous player
       const container = document.getElementById('player-container');
-      if (container) {
-        container.innerHTML = '';
+      if (!container) {
+        console.error('Player container not found');
+        return;
       }
+      
+      container.innerHTML = '<div class="p-8 text-center text-gray-500">Loading player...</div>';
 
-      // Initialize rrweb player
-      if ((window as any).rrwebPlayer && container) {
-        new (window as any).rrwebPlayer({
-          target: container,
-          props: {
-            events: session.events,
-            width: 1024,
-            height: 576,
-            autoPlay: true,
-            speed: 2
+      // Wait for rrweb-player to be available
+      const initPlayer = () => {
+        if ((window as any).rrwebPlayer) {
+          try {
+            container.innerHTML = ''; // Clear loading message
+            new (window as any).rrwebPlayer({
+              target: container,
+              props: {
+                events: session.events,
+                width: 1024,
+                height: 576,
+                autoPlay: true,
+                speed: 2,
+                showController: true
+              }
+            });
+            console.log('✅ Session player initialized');
+          } catch (error) {
+            console.error('Failed to initialize player:', error);
+            container.innerHTML = '<div class="p-8 text-center text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20 rounded">❌ Failed to initialize player. Error: ' + (error as Error).message + '</div>';
           }
-        });
-      } else {
-        console.error('rrweb-player not loaded yet');
-        container && (container.innerHTML = '<div class="p-8 text-center text-gray-500">Loading player...</div>');
-      }
+        } else {
+          console.log('Waiting for rrweb-player...');
+          setTimeout(initPlayer, 500);
+        }
+      };
+
+      initPlayer();
     } catch (error) {
       console.error('Failed to play session:', error);
-      alert('Failed to play session. Check console for details.');
+      const container = document.getElementById('player-container');
+      if (container) {
+        container.innerHTML = '<div class="p-8 text-center text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/20 rounded">❌ Error: ' + (error as Error).message + '</div>';
+      }
     }
   }
 
@@ -103,16 +125,18 @@ export default function SessionsPage() {
       <Script 
         src="/rrweb.min.js"
         strategy="beforeInteractive"
+        onLoad={() => console.log('✅ rrweb core loaded')}
+        onError={(e) => console.error('❌ rrweb core failed to load:', e)}
       />
       <Script 
         src="https://cdn.jsdelivr.net/npm/rrweb-player@latest/dist/index.js"
-        strategy="lazyOnload"
+        strategy="afterInteractive"
         onLoad={() => {
-          console.log('rrweb-player loaded');
+          console.log('✅ rrweb-player loaded');
           setRrwebPlayer((window as any).rrwebPlayer);
         }}
         onError={(e) => {
-          console.error('rrweb-player failed to load:', e);
+          console.error('❌ rrweb-player failed to load:', e);
         }}
       />
       <link 
