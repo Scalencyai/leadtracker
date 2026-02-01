@@ -178,29 +178,30 @@ export default function VisitorDetailPanel({ visitorId, onClose }: VisitorDetail
       />
 
       {/* Panel */}
-      <div className="fixed inset-y-0 right-0 w-full md:w-1/2 lg:w-1/3 bg-white dark:bg-gray-900 border-l border-gray-200 dark:border-gray-800 shadow-xl z-40 overflow-y-auto">
+      <div className="fixed inset-y-0 right-0 w-full sm:w-[90%] md:w-1/2 lg:w-1/3 bg-white dark:bg-gray-900 border-l border-gray-200 dark:border-gray-800 shadow-xl z-40 overflow-y-auto">
         {/* Header */}
-        <div className="sticky top-0 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800 p-6 z-10">
-          <div className="flex items-start justify-between">
-            <div className="flex-1">
+        <div className="sticky top-0 bg-white dark:bg-gray-900 border-b border-gray-200 dark:border-gray-800 p-4 sm:p-6 z-10">
+          <div className="flex items-start justify-between gap-3">
+            <div className="flex-1 min-w-0">
               <div className="flex items-center gap-2 mb-1">
-                <h2 className="text-2xl font-bold text-gray-900 dark:text-white">
+                <h2 className="text-lg sm:text-2xl font-bold text-gray-900 dark:text-white truncate">
                   {companyName}
                 </h2>
                 {isActive && (
-                  <span className="flex h-2 w-2">
-                    <span className="animate-ping absolute inline-flex h-2 w-2 rounded-full bg-success opacity-75"></span>
-                    <span className="relative inline-flex rounded-full h-2 w-2 bg-success"></span>
+                  <span className="flex h-2 w-2 flex-shrink-0">
+                    <span className="animate-ping absolute inline-flex h-2 w-2 rounded-full bg-green-500 opacity-75"></span>
+                    <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
                   </span>
                 )}
               </div>
-              <p className="text-sm text-gray-500 dark:text-gray-400">
+              <p className="text-xs sm:text-sm text-gray-500 dark:text-gray-400 truncate">
                 {location}
               </p>
             </div>
             <button
               onClick={onClose}
-              className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300"
+              className="text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 p-1 flex-shrink-0"
+              aria-label="Close"
             >
               <svg className="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
@@ -210,9 +211,9 @@ export default function VisitorDetailPanel({ visitorId, onClose }: VisitorDetail
         </div>
 
         {/* Content */}
-        <div className="p-6 space-y-6">
+        <div className="p-4 sm:p-6 space-y-4 sm:space-y-6">
           {/* Summary Stats */}
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-2 gap-2 sm:gap-3">
             <StatCard label="Page Views" value={pageViews.length.toString()} />
             <StatCard label="Unique Pages" value={uniquePages.toString()} />
             <StatCard label="Session Time" value={formatDuration(sessionDuration)} />
@@ -220,12 +221,12 @@ export default function VisitorDetailPanel({ visitorId, onClose }: VisitorDetail
           </div>
 
           {/* Engagement Metrics */}
-          <div className="bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 rounded-lg p-4 border border-blue-200 dark:border-blue-800">
-            <div className="flex items-center justify-between mb-3">
-              <h3 className="text-sm font-semibold text-gray-900 dark:text-white">
+          <div className="bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 rounded-lg p-3 sm:p-4 border border-blue-200 dark:border-blue-800">
+            <div className="flex items-center justify-between mb-2 sm:mb-3">
+              <h3 className="text-xs sm:text-sm font-semibold text-gray-900 dark:text-white">
                 📊 Engagement Score
               </h3>
-              <span className="text-2xl font-bold text-blue-600 dark:text-blue-400">
+              <span className="text-xl sm:text-2xl font-bold text-blue-600 dark:text-blue-400">
                 {Math.min(100, Math.round((pageViews.length * 10) + (sessionDuration / 60000)))}%
               </span>
             </div>
@@ -245,10 +246,10 @@ export default function VisitorDetailPanel({ visitorId, onClose }: VisitorDetail
 
           {/* Technology Stack */}
           <div>
-            <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-3">
+            <h3 className="text-xs sm:text-sm font-semibold text-gray-900 dark:text-white mb-2 sm:mb-3">
               💻 Technology
             </h3>
-            <div className="grid grid-cols-3 gap-3">
+            <div className="grid grid-cols-3 gap-2 sm:gap-3">
               <TechCard icon="🌐" label="Browser" value={deviceInfo.browser} />
               <TechCard icon="💾" label="OS" value={deviceInfo.os} />
               <TechCard icon="📱" label="Device" value={deviceInfo.device} />
@@ -257,17 +258,17 @@ export default function VisitorDetailPanel({ visitorId, onClose }: VisitorDetail
 
           {/* Visit Details */}
           <div>
-            <div className="flex items-center justify-between mb-3">
-              <h3 className="text-sm font-semibold text-gray-900 dark:text-white">
+            <div className="flex items-center justify-between mb-2 sm:mb-3 gap-2">
+              <h3 className="text-xs sm:text-sm font-semibold text-gray-900 dark:text-white">
                 📍 Visit Details
               </h3>
               {location === 'Unknown' && (
                 <button
                   onClick={refreshIPLookup}
                   disabled={refreshingIP}
-                  className="text-xs px-3 py-1.5 bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 rounded-lg hover:bg-blue-200 dark:hover:bg-blue-800 transition-colors disabled:opacity-50 font-medium"
+                  className="text-xs px-2 sm:px-3 py-1 sm:py-1.5 bg-blue-100 dark:bg-blue-900 text-blue-700 dark:text-blue-300 rounded-lg hover:bg-blue-200 dark:hover:bg-blue-800 transition-colors disabled:opacity-50 font-medium whitespace-nowrap"
                 >
-                  {refreshingIP ? '🔄 Loading...' : '🔍 Lookup Location'}
+                  {refreshingIP ? '🔄' : '🔍 Lookup'}
                 </button>
               )}
             </div>
@@ -291,15 +292,15 @@ export default function VisitorDetailPanel({ visitorId, onClose }: VisitorDetail
           {/* Referrer Source */}
           {pageViews.length > 0 && pageViews[0].referrer && (
             <div>
-              <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-2">
+              <h3 className="text-xs sm:text-sm font-semibold text-gray-900 dark:text-white mb-2">
                 Traffic Source
               </h3>
-              <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-3">
-                <div className="text-sm font-medium text-gray-900 dark:text-white">
+              <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-2.5 sm:p-3">
+                <div className="text-xs sm:text-sm font-medium text-gray-900 dark:text-white">
                   {getReferrerSource(pageViews[0].referrer)}
                 </div>
                 {pageViews[0].referrer && (
-                  <div className="text-xs text-gray-500 dark:text-gray-400 mt-1 font-mono truncate">
+                  <div className="text-[10px] sm:text-xs text-gray-500 dark:text-gray-400 mt-1 font-mono truncate">
                     {pageViews[0].referrer}
                   </div>
                 )}
@@ -309,48 +310,48 @@ export default function VisitorDetailPanel({ visitorId, onClose }: VisitorDetail
 
           {/* Session Timeline */}
           <div>
-            <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-3">
+            <h3 className="text-xs sm:text-sm font-semibold text-gray-900 dark:text-white mb-2 sm:mb-3">
               🕐 Session Timeline ({pageViews.length} pages)
             </h3>
             <div className="relative">
               {/* Timeline line */}
-              <div className="absolute left-4 top-0 bottom-0 w-0.5 bg-gray-200 dark:bg-gray-700" />
+              <div className="absolute left-3 sm:left-4 top-0 bottom-0 w-0.5 bg-gray-200 dark:bg-gray-700" />
               
-              <div className="space-y-4">
+              <div className="space-y-3 sm:space-y-4">
                 {pageViews.slice().reverse().map((pv, index) => {
                   const nextPv = pageViews[pageViews.length - index - 2];
                   const timeOnPage = nextPv ? nextPv.viewed_at - pv.viewed_at : 0;
                   
                   return (
-                    <div key={pv.id} className="relative pl-10">
+                    <div key={pv.id} className="relative pl-8 sm:pl-10">
                       {/* Timeline dot */}
-                      <div className={`absolute left-2.5 w-3 h-3 rounded-full ${
+                      <div className={`absolute left-2 sm:left-2.5 w-2.5 h-2.5 sm:w-3 sm:h-3 rounded-full ${
                         index === 0 
-                          ? 'bg-green-500 ring-4 ring-green-100 dark:ring-green-900' 
+                          ? 'bg-green-500 ring-2 sm:ring-4 ring-green-100 dark:ring-green-900' 
                           : 'bg-blue-500'
                       }`} />
                       
-                      <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-3 hover:shadow-md transition-shadow">
+                      <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-2.5 sm:p-3 hover:shadow-md transition-shadow">
                         <div className="flex items-start justify-between gap-2 mb-1">
                           <div className="flex-1 min-w-0">
-                            <div className="text-sm font-medium text-gray-900 dark:text-white truncate">
+                            <div className="text-xs sm:text-sm font-medium text-gray-900 dark:text-white truncate">
                               {getReadableUrl(pv.page_url)}
                             </div>
                           </div>
                           {index === 0 && (
-                            <span className="text-xs font-semibold text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-900/30 px-2 py-0.5 rounded flex-shrink-0">
+                            <span className="text-[10px] sm:text-xs font-semibold text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-900/30 px-1.5 sm:px-2 py-0.5 rounded flex-shrink-0">
                               Entry
                             </span>
                           )}
                           {index === pageViews.length - 1 && (
-                            <span className="text-xs font-semibold text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/30 px-2 py-0.5 rounded flex-shrink-0">
+                            <span className="text-[10px] sm:text-xs font-semibold text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/30 px-1.5 sm:px-2 py-0.5 rounded flex-shrink-0">
                               Exit
                             </span>
                           )}
                         </div>
                         
-                        <div className="flex items-center gap-3 text-xs text-gray-500 dark:text-gray-400">
-                          <span>🕐 {new Date(pv.viewed_at).toLocaleTimeString()}</span>
+                        <div className="flex items-center gap-2 sm:gap-3 text-[10px] sm:text-xs text-gray-500 dark:text-gray-400">
+                          <span>🕐 {new Date(pv.viewed_at).toLocaleTimeString('en', {hour: '2-digit', minute: '2-digit'})}</span>
                           {timeOnPage > 0 && (
                             <span>⏱️ {formatDuration(timeOnPage)}</span>
                           )}
@@ -358,7 +359,7 @@ export default function VisitorDetailPanel({ visitorId, onClose }: VisitorDetail
                         
                         {pv.referrer && index === 0 && (
                           <div className="mt-2 pt-2 border-t border-gray-100 dark:border-gray-700">
-                            <div className="text-xs text-gray-500 dark:text-gray-400">
+                            <div className="text-[10px] sm:text-xs text-gray-500 dark:text-gray-400 truncate">
                               <span className="font-medium">From:</span> {getReferrerSource(pv.referrer)}
                             </div>
                           </div>
@@ -408,19 +409,19 @@ function DetailRow({ label, value, mono, badge }: DetailRowProps) {
 
 function StatCard({ label, value }: { label: string; value: string }) {
   return (
-    <div className="bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-800 dark:to-gray-900 rounded-lg p-3 border border-gray-200 dark:border-gray-700">
-      <div className="text-xs text-gray-500 dark:text-gray-400 mb-1">{label}</div>
-      <div className="text-lg font-bold text-gray-900 dark:text-white">{value}</div>
+    <div className="bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-800 dark:to-gray-900 rounded-lg p-2.5 sm:p-3 border border-gray-200 dark:border-gray-700">
+      <div className="text-[10px] sm:text-xs text-gray-500 dark:text-gray-400 mb-0.5 sm:mb-1">{label}</div>
+      <div className="text-base sm:text-lg font-bold text-gray-900 dark:text-white truncate">{value}</div>
     </div>
   );
 }
 
 function TechCard({ icon, label, value }: { icon: string; label: string; value: string }) {
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-lg p-3 border border-gray-200 dark:border-gray-700 text-center">
-      <div className="text-2xl mb-1">{icon}</div>
-      <div className="text-xs text-gray-500 dark:text-gray-400 mb-1">{label}</div>
-      <div className="text-xs font-semibold text-gray-900 dark:text-white truncate">{value}</div>
+    <div className="bg-white dark:bg-gray-800 rounded-lg p-2 sm:p-3 border border-gray-200 dark:border-gray-700 text-center">
+      <div className="text-xl sm:text-2xl mb-0.5 sm:mb-1">{icon}</div>
+      <div className="text-[10px] sm:text-xs text-gray-500 dark:text-gray-400 mb-0.5 sm:mb-1">{label}</div>
+      <div className="text-[10px] sm:text-xs font-semibold text-gray-900 dark:text-white truncate">{value}</div>
     </div>
   );
 }
