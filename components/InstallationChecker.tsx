@@ -6,13 +6,16 @@ interface CheckResult {
   installed: boolean;
   url: string;
   checks: {
-    scriptFound: boolean;
+    apiResponding: boolean;
+    scriptFoundInHtml: boolean;
     endpointConfigured: boolean;
     asyncLoading: boolean;
     scriptUrl: string | null;
+    testedApiUrl: string;
   };
   issues: string[];
   recommendations: string[];
+  warnings?: string[];
 }
 
 export default function InstallationChecker() {
@@ -141,12 +144,12 @@ export default function InstallationChecker() {
               </div>
               <div className="divide-y divide-gray-200 dark:divide-gray-700">
                 <CheckItem 
-                  label="Tracking Script Found"
-                  status={result.checks.scriptFound}
+                  label="API Responding (Most Important!)"
+                  status={result.checks.apiResponding}
                 />
                 <CheckItem 
-                  label="API Endpoint Configured"
-                  status={result.checks.endpointConfigured}
+                  label="Tracking Script Found"
+                  status={result.checks.scriptFoundInHtml}
                 />
                 <CheckItem 
                   label="Async Loading"
@@ -161,6 +164,17 @@ export default function InstallationChecker() {
                     <code className="text-xs bg-gray-100 dark:bg-gray-800 px-2 py-1 rounded 
                                    text-gray-800 dark:text-gray-200">
                       {result.checks.scriptUrl}
+                    </code>
+                  </div>
+                )}
+                {result.checks.testedApiUrl && (
+                  <div className="px-4 py-3 bg-gray-50 dark:bg-gray-900/50">
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mb-1">
+                      Tested API:
+                    </p>
+                    <code className="text-xs bg-gray-100 dark:bg-gray-800 px-2 py-1 rounded 
+                                   text-gray-800 dark:text-gray-200">
+                      {result.checks.testedApiUrl}
                     </code>
                   </div>
                 )}
@@ -180,6 +194,25 @@ export default function InstallationChecker() {
                   {result.issues.map((issue, i) => (
                     <li key={i} className="px-4 py-2 text-sm text-orange-800 dark:text-orange-300">
                       {issue}
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
+            {/* Warnings */}
+            {result.warnings && result.warnings.length > 0 && (
+              <div className="border border-yellow-200 dark:border-yellow-800 rounded-md overflow-hidden">
+                <div className="bg-yellow-50 dark:bg-yellow-900/20 px-4 py-2 border-b 
+                              border-yellow-200 dark:border-yellow-800">
+                  <h4 className="font-medium text-yellow-900 dark:text-yellow-300">
+                    ℹ️ Warnings (Usually OK for Framer/React)
+                  </h4>
+                </div>
+                <ul className="divide-y divide-yellow-100 dark:divide-yellow-900">
+                  {result.warnings.map((warning, i) => (
+                    <li key={i} className="px-4 py-2 text-sm text-yellow-800 dark:text-yellow-300">
+                      {warning}
                     </li>
                   ))}
                 </ul>
