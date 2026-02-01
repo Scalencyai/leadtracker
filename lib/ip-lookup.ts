@@ -130,7 +130,7 @@ async function reverseDNSLookup(ipAddress: string): Promise<string | null> {
   return null;
 }
 
-// Perform IP lookup using ipapi.co (free tier: 1000/day) + Reverse DNS + WHOIS
+// Perform IP lookup using ipapi.is (free tier: 1000/day) + Reverse DNS + WHOIS
 export async function lookupIP(ipAddress: string, userAgent: string | null): Promise<IPLookupResult> {
   // Check if it's a bot first
   const botDetected = isBot(userAgent);
@@ -142,7 +142,7 @@ export async function lookupIP(ipAddress: string, userAgent: string | null): Pro
       console.log(`[IP Lookup] ✓ Manual Override: ${companyFromOverride}`);
       return {
         company_name: companyFromOverride,
-        country: null, // Will be filled by ipapi.co below
+        country: null, // Will be filled by ipapi.is below
         city: null,
         isp: null,
         is_bot: botDetected,
@@ -156,34 +156,32 @@ export async function lookupIP(ipAddress: string, userAgent: string | null): Pro
     
     console.log(`[IP Lookup] IP: ${ipAddress}, Hostname: ${hostname}, Company from DNS: ${companyFromHostname}`);
 
-    // Use ipapi.co free tier
-    const response = await fetch(`https://ipapi.co/${ipAddress}/json/`, {
+    // 3. Use ipapi.is (better than ipapi.co - has datacenter/VPN/security detection)
+    const response = await fetch(`https://api.ipapi.is?q=${ipAddress}`, {
       headers: {
-        'User-Agent': 'LeadTracker/1.0',
+        'User-Agent': 'LeadTracker/2.0',
       },
     });
 
     if (!response.ok) {
-      throw new Error(`IP lookup failed: ${response.status}`);
+      console.warn(`[IP Lookup] ipapi.is failed (${response.status}), falling back to ipapi.co...`);
+      return await lookupIPFallback(ipAddress, userAgent);
     }
 
     const data = await response.json();
 
-    // Handle error responses from ipapi
-    if (data.error) {
-      console.error('IP lookup error:', data.reason || data.error);
-      return {
-        company_name: companyFromHostname,
-        country: null,
-        city: null,
-        isp: null,
-        is_bot: botDetected,
-        is_isp: false,
-      };
-    }
-
-    const ispName = data.org || data.isp || null;
-    const ispDetected = isISP(ispName);
+    // Extract data from ipapi.is format
+    const ispName = data.company?.name || data.asn?.org || null;
+    const companyType = data.company?.type || data.asn?.type || null;
+    
+    // Detect if this is datacenter/hosting (better than simple ISP check!)
+    const isDatacenter = data.is_datacenter || companyType === 'hosting';
+    const isVPN = data.is_vpn || false;
+    const isProxy = data.is_proxy || false;
+    const isTor = data.is_tor || false;
+    
+    // ISP detection (now includes datacenter traffic!)
+    const ispDetected = isISP(ispName) || isDatacenter || isVPN || isProxy;
 
     // Try to extract company name from org field
     let companyFromOrg = null;
@@ -195,7 +193,7 @@ export async function lookupIP(ipAddress: string, userAgent: string | null): Pro
     // If still no good company name, try WHOIS lookup
     let companyFromWhois = null;
     if (!companyFromHostname && !companyFromOrg) {
-      console.log(`[IP Lookup] No company from DNS/ipapi, trying WHOIS...`);
+      console.log(`[IP Lookup] No company from DNS/ipapi.is, trying WHOIS...`);
       const whoisData = await whoisLookup(ipAddress);
       companyFromWhois = whoisData.company_name;
       console.log(`[IP Lookup] WHOIS Company: ${companyFromWhois}`);
@@ -204,35 +202,47 @@ export async function lookupIP(ipAddress: string, userAgent: string | null): Pro
     // Prefer hostname > WHOIS > org name
     const companyName = companyFromHostname || companyFromWhois || companyFromOrg;
 
+    // Security flags for better lead qualification
+    const securityFlags = [];
+    if (isDatacenter) securityFlags.push('datacenter');
+    if (isVPN) securityFlags.push('vpn');
+    if (isProxy) securityFlags.push('proxy');
+    if (isTor) securityFlags.push('tor');
+    if (data.is_abuser) securityFlags.push('abuser');
+    
+    if (securityFlags.length > 0) {
+      console.log(`[IP Lookup] ⚠️  Security flags: ${securityFlags.join(', ')}`);
+    }
+
     console.log(`[IP Lookup] Final Company: ${companyName} (hostname: ${companyFromHostname}, whois: ${companyFromWhois}, org: ${companyFromOrg})`);
 
     return {
       company_name: companyName,
-      country: data.country_name || null,
-      city: data.city || null,
+      country: data.location?.country || null,
+      city: data.location?.city || null,
       isp: ispName,
       is_bot: botDetected,
       is_isp: ispDetected,
     };
   } catch (error) {
-    console.error('IP lookup failed:', error);
-    return {
-      company_name: null,
-      country: null,
-      city: null,
-      isp: null,
-      is_bot: botDetected,
-      is_isp: false,
-    };
+    console.error('[IP Lookup] ipapi.is error:', error);
+    // Fallback to ipapi.co
+    return await lookupIPFallback(ipAddress, userAgent);
   }
 }
 
-// Fallback to ip-api.com if ipapi.co fails
+// Fallback to ipapi.co if ipapi.is fails
 export async function lookupIPFallback(ipAddress: string, userAgent: string | null): Promise<IPLookupResult> {
   const botDetected = isBot(userAgent);
 
   try {
-    const response = await fetch(`http://ip-api.com/json/${ipAddress}?fields=status,country,city,isp,org`);
+    console.log(`[IP Lookup] Using fallback: ipapi.co`);
+    
+    const response = await fetch(`https://ipapi.co/${ipAddress}/json/`, {
+      headers: {
+        'User-Agent': 'LeadTracker/2.0',
+      },
+    });
 
     if (!response.ok) {
       throw new Error(`IP lookup failed: ${response.status}`);
@@ -240,7 +250,8 @@ export async function lookupIPFallback(ipAddress: string, userAgent: string | nu
 
     const data = await response.json();
 
-    if (data.status !== 'success') {
+    if (data.error) {
+      console.error('[IP Lookup] ipapi.co error:', data.reason || data.error);
       return {
         company_name: null,
         country: null,
@@ -261,14 +272,14 @@ export async function lookupIPFallback(ipAddress: string, userAgent: string | nu
 
     return {
       company_name: companyName,
-      country: data.country || null,
+      country: data.country_name || null,
       city: data.city || null,
       isp: ispName,
       is_bot: botDetected,
       is_isp: ispDetected,
     };
   } catch (error) {
-    console.error('IP lookup fallback failed:', error);
+    console.error('[IP Lookup] Fallback failed:', error);
     return {
       company_name: null,
       country: null,
