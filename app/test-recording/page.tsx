@@ -28,9 +28,9 @@ export default function TestRecordingPage() {
 
   return (
     <>
-      {/* Load rrweb */}
+      {/* Load rrweb - try unpkg as alternative CDN */}
       <Script 
-        src="https://cdn.jsdelivr.net/npm/rrweb@latest/dist/rrweb.min.js"
+        src="https://unpkg.com/rrweb@latest/dist/rrweb.min.js"
         strategy="beforeInteractive"
       />
       <Script 
