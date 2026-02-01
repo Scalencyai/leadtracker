@@ -2,6 +2,7 @@
 
 import { useState, useEffect } from 'react';
 import VisitorTable from '@/components/VisitorTable';
+import VisitorDetailPanel from '@/components/VisitorDetailPanel';
 import StatsCards from '@/components/StatsCards';
 import Filters from '@/components/Filters';
 import TrackingScriptModal from '@/components/TrackingScriptModal';
@@ -245,6 +246,14 @@ export default function Dashboard() {
       {/* Modals */}
       {showScriptModal && (
         <TrackingScriptModal onClose={() => setShowScriptModal(false)} />
+      )}
+
+      {/* Visitor Detail Panel */}
+      {selectedVisitor && typeof selectedVisitor === 'number' && (
+        <VisitorDetailPanel
+          visitorId={selectedVisitor}
+          onClose={() => setSelectedVisitor(null)}
+        />
       )}
     </div>
   );

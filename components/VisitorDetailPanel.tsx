@@ -48,6 +48,17 @@ export default function VisitorDetailPanel({ visitorId, onClose }: VisitorDetail
   const location = [visitor.city, visitor.country].filter(Boolean).join(', ') || 'Unknown';
   const sessionDuration = visitor.last_seen - visitor.first_seen;
   const isActive = Date.now() - visitor.last_seen < 5 * 60 * 1000;
+  
+  // Calculate additional stats
+  const uniquePages = new Set(pageViews.map(pv => pv.page_url)).size;
+  const avgTimePerPage = pageViews.length > 1 ? sessionDuration / pageViews.length : 0;
+  const entryPage = pageViews[pageViews.length - 1]?.page_url || 'N/A';
+  const exitPage = pageViews[0]?.page_url || 'N/A';
+  const bounceRate = pageViews.length === 1 ? 100 : 0;
+  
+  // Parse User Agent
+  const userAgent = pageViews[0]?.user_agent || '';
+  const deviceInfo = parseUserAgent(userAgent);
 
   function formatDuration(ms: number): string {
     const minutes = Math.floor(ms / 60000);
@@ -84,6 +95,36 @@ export default function VisitorDetailPanel({ visitorId, onClose }: VisitorDetail
     } catch {
       return 'Direct';
     }
+  }
+
+  function parseUserAgent(ua: string) {
+    if (!ua) return { browser: 'Unknown', os: 'Unknown', device: 'Unknown' };
+    
+    // Browser detection
+    let browser = 'Unknown';
+    if (ua.includes('Chrome') && !ua.includes('Edg')) browser = 'Chrome';
+    else if (ua.includes('Safari') && !ua.includes('Chrome')) browser = 'Safari';
+    else if (ua.includes('Firefox')) browser = 'Firefox';
+    else if (ua.includes('Edg')) browser = 'Edge';
+    else if (ua.includes('Opera') || ua.includes('OPR')) browser = 'Opera';
+
+    // OS detection
+    let os = 'Unknown';
+    if (ua.includes('Windows NT 10')) os = 'Windows 10';
+    else if (ua.includes('Windows NT 6.3')) os = 'Windows 8.1';
+    else if (ua.includes('Windows NT 6.2')) os = 'Windows 8';
+    else if (ua.includes('Windows NT 6.1')) os = 'Windows 7';
+    else if (ua.includes('Mac OS X')) os = 'macOS';
+    else if (ua.includes('Android')) os = 'Android';
+    else if (ua.includes('iPhone') || ua.includes('iPad')) os = 'iOS';
+    else if (ua.includes('Linux')) os = 'Linux';
+
+    // Device type
+    let device = 'Desktop';
+    if (ua.includes('Mobile') || ua.includes('Android') || ua.includes('iPhone')) device = 'Mobile';
+    else if (ua.includes('iPad') || ua.includes('Tablet')) device = 'Tablet';
+
+    return { browser, os, device };
   }
 
   return (
@@ -129,33 +170,69 @@ export default function VisitorDetailPanel({ visitorId, onClose }: VisitorDetail
         {/* Content */}
         <div className="p-6 space-y-6">
           {/* Summary Stats */}
-          <div className="grid grid-cols-2 gap-4">
-            <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4">
-              <div className="text-sm text-gray-500 dark:text-gray-400">Total Visits</div>
-              <div className="text-2xl font-bold text-gray-900 dark:text-white mt-1">
-                {pageViews.length}
-              </div>
+          <div className="grid grid-cols-2 gap-3">
+            <StatCard label="Page Views" value={pageViews.length.toString()} />
+            <StatCard label="Unique Pages" value={uniquePages.toString()} />
+            <StatCard label="Session Time" value={formatDuration(sessionDuration)} />
+            <StatCard label="Avg Time/Page" value={formatDuration(avgTimePerPage)} />
+          </div>
+
+          {/* Engagement Metrics */}
+          <div className="bg-gradient-to-br from-blue-50 to-indigo-50 dark:from-blue-900/20 dark:to-indigo-900/20 rounded-lg p-4 border border-blue-200 dark:border-blue-800">
+            <div className="flex items-center justify-between mb-3">
+              <h3 className="text-sm font-semibold text-gray-900 dark:text-white">
+                📊 Engagement Score
+              </h3>
+              <span className="text-2xl font-bold text-blue-600 dark:text-blue-400">
+                {Math.min(100, Math.round((pageViews.length * 10) + (sessionDuration / 60000)))}%
+              </span>
             </div>
-            <div className="bg-gray-50 dark:bg-gray-800 rounded-lg p-4">
-              <div className="text-sm text-gray-500 dark:text-gray-400">Session Duration</div>
-              <div className="text-2xl font-bold text-gray-900 dark:text-white mt-1">
-                {formatDuration(sessionDuration)}
+            <div className="grid grid-cols-2 gap-2 text-xs">
+              <div>
+                <span className="text-gray-500 dark:text-gray-400">Bounce Rate:</span>
+                <span className="ml-1 font-medium text-gray-900 dark:text-white">{bounceRate}%</span>
+              </div>
+              <div>
+                <span className="text-gray-500 dark:text-gray-400">Pages/Visit:</span>
+                <span className="ml-1 font-medium text-gray-900 dark:text-white">
+                  {(pageViews.length / 1).toFixed(1)}
+                </span>
               </div>
             </div>
           </div>
 
-          {/* Details */}
-          <div className="space-y-3">
-            <DetailRow label="IP Address" value={visitor.ip_address} mono />
-            <DetailRow label="ISP" value={visitor.isp || 'Unknown'} />
-            <DetailRow label="First Seen" value={formatDateTime(visitor.first_seen)} />
-            <DetailRow label="Last Seen" value={formatDateTime(visitor.last_seen)} />
-            {visitor.is_bot === 1 && (
-              <DetailRow label="Type" value="Bot Detected" badge="red" />
-            )}
-            {visitor.is_isp === 1 && (
-              <DetailRow label="Type" value="ISP Detected" badge="yellow" />
-            )}
+          {/* Technology Stack */}
+          <div>
+            <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-3">
+              💻 Technology
+            </h3>
+            <div className="grid grid-cols-3 gap-3">
+              <TechCard icon="🌐" label="Browser" value={deviceInfo.browser} />
+              <TechCard icon="💾" label="OS" value={deviceInfo.os} />
+              <TechCard icon="📱" label="Device" value={deviceInfo.device} />
+            </div>
+          </div>
+
+          {/* Visit Details */}
+          <div>
+            <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-3">
+              📍 Visit Details
+            </h3>
+            <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 overflow-hidden">
+              <DetailRow label="IP Address" value={visitor.ip_address} mono />
+              <DetailRow label="Location" value={location} />
+              <DetailRow label="ISP" value={visitor.isp || 'Unknown'} />
+              <DetailRow label="Entry Page" value={getReadableUrl(entryPage)} />
+              <DetailRow label="Exit Page" value={getReadableUrl(exitPage)} />
+              <DetailRow label="First Seen" value={formatDateTime(visitor.first_seen)} />
+              <DetailRow label="Last Seen" value={formatDateTime(visitor.last_seen)} />
+              {visitor.is_bot === 1 && (
+                <DetailRow label="Type" value="🤖 Bot Detected" badge="red" />
+              )}
+              {visitor.is_isp === 1 && (
+                <DetailRow label="Type" value="🏢 ISP Detected" badge="yellow" />
+              )}
+            </div>
           </div>
 
           {/* Referrer Source */}
@@ -177,25 +254,67 @@ export default function VisitorDetailPanel({ visitorId, onClose }: VisitorDetail
             </div>
           )}
 
-          {/* Page Views */}
+          {/* Session Timeline */}
           <div>
             <h3 className="text-sm font-semibold text-gray-900 dark:text-white mb-3">
-              Pages Viewed ({pageViews.length})
+              🕐 Session Timeline ({pageViews.length} pages)
             </h3>
-            <div className="space-y-2">
-              {pageViews.map((pv) => (
-                <div
-                  key={pv.id}
-                  className="bg-gray-50 dark:bg-gray-800 rounded-lg p-3 hover:bg-gray-100 dark:hover:bg-gray-700 transition-colors"
-                >
-                  <div className="text-sm font-medium text-gray-900 dark:text-white truncate">
-                    {getReadableUrl(pv.page_url)}
-                  </div>
-                  <div className="text-xs text-gray-500 dark:text-gray-400 mt-1">
-                    {formatDateTime(pv.viewed_at)}
-                  </div>
-                </div>
-              ))}
+            <div className="relative">
+              {/* Timeline line */}
+              <div className="absolute left-4 top-0 bottom-0 w-0.5 bg-gray-200 dark:bg-gray-700" />
+              
+              <div className="space-y-4">
+                {pageViews.slice().reverse().map((pv, index) => {
+                  const nextPv = pageViews[pageViews.length - index - 2];
+                  const timeOnPage = nextPv ? nextPv.viewed_at - pv.viewed_at : 0;
+                  
+                  return (
+                    <div key={pv.id} className="relative pl-10">
+                      {/* Timeline dot */}
+                      <div className={`absolute left-2.5 w-3 h-3 rounded-full ${
+                        index === 0 
+                          ? 'bg-green-500 ring-4 ring-green-100 dark:ring-green-900' 
+                          : 'bg-blue-500'
+                      }`} />
+                      
+                      <div className="bg-white dark:bg-gray-800 rounded-lg border border-gray-200 dark:border-gray-700 p-3 hover:shadow-md transition-shadow">
+                        <div className="flex items-start justify-between gap-2 mb-1">
+                          <div className="flex-1 min-w-0">
+                            <div className="text-sm font-medium text-gray-900 dark:text-white truncate">
+                              {getReadableUrl(pv.page_url)}
+                            </div>
+                          </div>
+                          {index === 0 && (
+                            <span className="text-xs font-semibold text-green-600 dark:text-green-400 bg-green-50 dark:bg-green-900/30 px-2 py-0.5 rounded flex-shrink-0">
+                              Entry
+                            </span>
+                          )}
+                          {index === pageViews.length - 1 && (
+                            <span className="text-xs font-semibold text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-900/30 px-2 py-0.5 rounded flex-shrink-0">
+                              Exit
+                            </span>
+                          )}
+                        </div>
+                        
+                        <div className="flex items-center gap-3 text-xs text-gray-500 dark:text-gray-400">
+                          <span>🕐 {new Date(pv.viewed_at).toLocaleTimeString()}</span>
+                          {timeOnPage > 0 && (
+                            <span>⏱️ {formatDuration(timeOnPage)}</span>
+                          )}
+                        </div>
+                        
+                        {pv.referrer && index === 0 && (
+                          <div className="mt-2 pt-2 border-t border-gray-100 dark:border-gray-700">
+                            <div className="text-xs text-gray-500 dark:text-gray-400">
+                              <span className="font-medium">From:</span> {getReferrerSource(pv.referrer)}
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
             </div>
           </div>
         </div>
@@ -219,17 +338,36 @@ function DetailRow({ label, value, mono, badge }: DetailRowProps) {
   };
 
   return (
-    <div className="flex justify-between items-start py-2 border-b border-gray-100 dark:border-gray-800">
+    <div className="flex justify-between items-start py-2 border-b border-gray-100 dark:border-gray-700 last:border-0">
       <div className="text-sm text-gray-500 dark:text-gray-400">{label}</div>
       {badge ? (
         <span className={`text-xs font-medium px-2 py-1 rounded ${badgeClasses[badge]}`}>
           {value}
         </span>
       ) : (
-        <div className={`text-sm text-gray-900 dark:text-white ${mono ? 'font-mono' : ''}`}>
+        <div className={`text-sm text-gray-900 dark:text-white ${mono ? 'font-mono text-xs' : ''} text-right max-w-[60%] truncate`}>
           {value}
         </div>
       )}
+    </div>
+  );
+}
+
+function StatCard({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-800 dark:to-gray-900 rounded-lg p-3 border border-gray-200 dark:border-gray-700">
+      <div className="text-xs text-gray-500 dark:text-gray-400 mb-1">{label}</div>
+      <div className="text-lg font-bold text-gray-900 dark:text-white">{value}</div>
+    </div>
+  );
+}
+
+function TechCard({ icon, label, value }: { icon: string; label: string; value: string }) {
+  return (
+    <div className="bg-white dark:bg-gray-800 rounded-lg p-3 border border-gray-200 dark:border-gray-700 text-center">
+      <div className="text-2xl mb-1">{icon}</div>
+      <div className="text-xs text-gray-500 dark:text-gray-400 mb-1">{label}</div>
+      <div className="text-xs font-semibold text-gray-900 dark:text-white truncate">{value}</div>
     </div>
   );
 }

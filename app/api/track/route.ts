@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { getOrCreateVisitor, addPageView } from '@/lib/db';
+import { getOrCreateVisitor, addPageView, needsLookup, updateVisitorLookup } from '@/lib/db';
+import { lookupIP } from '@/lib/ip-lookup';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
@@ -65,6 +66,18 @@ export async function POST(request: NextRequest) {
       userAgent || null,
       timestamp
     );
+
+    // Perform IP lookup if needed (new visitor or cache expired)
+    if (needsLookup(visitor)) {
+      // Do async lookup in background (don't block response)
+      lookupIP(ipAddress, userAgent || null)
+        .then(lookupData => {
+          return updateVisitorLookup(ipAddress, lookupData);
+        })
+        .catch(err => {
+          console.error('Background IP lookup failed:', err);
+        });
+    }
 
     return NextResponse.json({ 
       success: true,
