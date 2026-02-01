@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { getOrCreateVisitor, addPageView, needsLookup, updateVisitorLookup } from '@/lib/db';
 import { lookupIP } from '@/lib/ip-lookup';
+import { getCompanyFromReferrer } from '@/lib/domain-to-company';
 
 export const dynamic = 'force-dynamic';
 export const runtime = 'nodejs';
@@ -85,6 +86,23 @@ export async function POST(request: NextRequest) {
       ipAddress.startsWith('172.') ||
       ipAddress === 'localhost' ||
       ipAddress === '::1';
+
+    // Try to extract company from referrer (better than IP!)
+    if (referrer && !visitor.company_name) {
+      const { domain, company } = getCompanyFromReferrer(referrer);
+      if (company) {
+        console.log(`[Referrer] Extracted company: ${company} from ${domain}`);
+        // Update visitor with referrer-based company (async)
+        updateVisitorLookup(ipAddress, {
+          company_name: company,
+          country: null,
+          city: null,
+          isp: null,
+          is_bot: false,
+          is_isp: false,
+        }).catch(err => console.error('[Referrer] Update failed:', err));
+      }
+    }
 
     if (!isPrivateIP && needsLookup(visitor)) {
       console.log(`[IP Lookup] Starting lookup for ${ipAddress}...`);
