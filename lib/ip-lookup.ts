@@ -157,7 +157,12 @@ export async function lookupIP(ipAddress: string, userAgent: string | null): Pro
     console.log(`[IP Lookup] IP: ${ipAddress}, Hostname: ${hostname}, Company from DNS: ${companyFromHostname}`);
 
     // 3. Use ipapi.is (better than ipapi.co - has datacenter/VPN/security detection)
-    const response = await fetch(`https://api.ipapi.is?q=${ipAddress}`, {
+    const apiKey = process.env.IPAPI_IS_KEY || '';
+    const apiUrl = apiKey 
+      ? `https://api.ipapi.is?q=${ipAddress}&key=${apiKey}`
+      : `https://api.ipapi.is?q=${ipAddress}`;
+    
+    const response = await fetch(apiUrl, {
       headers: {
         'User-Agent': 'LeadTracker/2.0',
       },
