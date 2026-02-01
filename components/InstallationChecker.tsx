@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 
 interface CheckResult {
   installed: boolean;
@@ -23,6 +23,25 @@ export default function InstallationChecker() {
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<CheckResult | null>(null);
   const [error, setError] = useState<string | null>(null);
+  const [savedWebsites, setSavedWebsites] = useState<string[]>([]);
+  const [showDropdown, setShowDropdown] = useState(false);
+
+  // Load saved websites on mount
+  useEffect(() => {
+    fetchSavedWebsites();
+  }, []);
+
+  async function fetchSavedWebsites() {
+    try {
+      const res = await fetch('/api/tracked-websites');
+      const data = await res.json();
+      if (data.websites) {
+        setSavedWebsites(data.websites.map((w: any) => w.url));
+      }
+    } catch (err) {
+      console.error('Failed to load saved websites:', err);
+    }
+  }
 
   const checkInstallation = async () => {
     if (!url) {
@@ -49,6 +68,17 @@ export default function InstallationChecker() {
       }
 
       setResult(data);
+
+      // Save URL to database
+      const status = data.installed ? 'installed' : 'issues';
+      await fetch('/api/tracked-websites', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ url, status })
+      }).catch(err => console.error('Failed to save website:', err));
+
+      // Refresh saved websites list
+      fetchSavedWebsites();
     } catch (err) {
       setError('Network error - please try again');
     } finally {
@@ -68,17 +98,50 @@ export default function InstallationChecker() {
           <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
             Website URL
           </label>
-          <div className="flex gap-2">
-            <input
-              type="url"
-              value={url}
-              onChange={(e) => setUrl(e.target.value)}
-              placeholder="https://example.com"
-              className="flex-1 px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md 
-                       bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100
-                       focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-              onKeyDown={(e) => e.key === 'Enter' && checkInstallation()}
-            />
+          <div className="flex gap-2 relative">
+            <div className="flex-1 relative">
+              <input
+                type="url"
+                value={url}
+                onChange={(e) => setUrl(e.target.value)}
+                onFocus={() => savedWebsites.length > 0 && setShowDropdown(true)}
+                placeholder="https://example.com"
+                className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-md 
+                         bg-white dark:bg-gray-700 text-gray-900 dark:text-gray-100
+                         focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+                onKeyDown={(e) => e.key === 'Enter' && checkInstallation()}
+              />
+              {/* Dropdown with saved websites */}
+              {showDropdown && savedWebsites.length > 0 && (
+                <>
+                  <div 
+                    className="fixed inset-0 z-10" 
+                    onClick={() => setShowDropdown(false)}
+                  />
+                  <div className="absolute z-20 w-full mt-1 bg-white dark:bg-gray-700 border border-gray-300 dark:border-gray-600 rounded-md shadow-lg max-h-60 overflow-auto">
+                    <div className="px-3 py-2 text-xs font-semibold text-gray-500 dark:text-gray-400 border-b border-gray-200 dark:border-gray-600">
+                      Recent Websites
+                    </div>
+                    {savedWebsites.slice(0, 10).map((savedUrl, idx) => (
+                      <button
+                        key={idx}
+                        onClick={() => {
+                          setUrl(savedUrl);
+                          setShowDropdown(false);
+                        }}
+                        className="w-full px-4 py-2 text-left text-sm text-gray-700 dark:text-gray-300 
+                                 hover:bg-blue-50 dark:hover:bg-blue-900 transition-colors flex items-center gap-2"
+                      >
+                        <svg className="w-4 h-4 text-gray-400" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M21 12a9 9 0 01-9 9m9-9a9 9 0 00-9-9m9 9H3m9 9a9 9 0 01-9-9m9 9c1.657 0 3-4.03 3-9s-1.343-9-3-9m0 18c-1.657 0-3-4.03-3-9s1.343-9 3-9m-9 9a9 9 0 019-9" />
+                        </svg>
+                        <span className="truncate">{savedUrl}</span>
+                      </button>
+                    ))}
+                  </div>
+                </>
+              )}
+            </div>
             <button
               onClick={checkInstallation}
               disabled={loading || !url}
